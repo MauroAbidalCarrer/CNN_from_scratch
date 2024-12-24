@@ -1,0 +1,10 @@
+name: CNN
+channels:
+  - defaults
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+    - kagglehub==0.3.6
+    - numpy==2.2
+    - rich==13.9.4
