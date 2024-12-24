@@ -8,3 +8,4 @@ dependencies:
     - kagglehub==0.3.6
     - numpy==2.2
     - rich==13.9.4
+    - scipy==1.14
