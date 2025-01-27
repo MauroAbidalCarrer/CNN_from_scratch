@@ -1,5 +1,3 @@
-import sys
-
 import numpy as np
 from scipy.signal import correlate, convolve
 
@@ -22,51 +20,61 @@ class Convolutional:
 
 class Linear:
     def __init__(self, input_size:int, output_size:int):
-        self.weights = np.random.uniform(-1, 1, (input_size, output_size))
-        self.biases = np.random.uniform(-1, 1, output_size)
+        # Create a matrix of shape(nb_neurons, nb_inputs) with random values.
+        # Since we are using batches of inputs and performing matrix multiplication on them and that
+        # because matMul performs the dot product on the rows of the first matrix and the columms of the second instead of row/row,
+        # we would need to transpose() the weight matrix for every pass.
+        # So instead, we make the matrix of shape (input_size, nb_neurons).
+        self.weights = np.random.randn(input_size, output_size)
+        # The parameter of the funciton is in parenthesis because it is a tuple of size one.
+        # We declare the biases as a column vector to perform addidtion to the batch (matix) output.
+        self.biases = np.zeros((1, output_size))
 
     def forward(self, input:np.ndarray) -> np.ndarray:
         self.input = input
         return input @ self.weights + self.biases
-    
-    def backward(self, gradient:np.ndarray, learning_rate:float) -> np.ndarray:
-        self.weights -= learning_rate * np.outer(self.input, gradient)
-        self.biases -= learning_rate * gradient
-        return gradient @ self.weights.T
+
+    def backward(self, gradients:np.ndarray, learning_rate:float) -> np.ndarray:
+        self.weights -= self.input.T @ gradients * learning_rate
+        self.biases -= learning_rate * gradients.sum(axis=0, keepdims=True)
+        return gradients @ self.weights.T
 
 class Relu:
     def forward(self, input:np.ndarray) -> np.ndarray:
         self.input = input
         return np.maximum(input, 0)
-    
+
     def backward(self, gradient:np.ndarray, learning_rate:float) -> np.ndarray:
+        # Copy gradient to avoid modifying the original gradient.
+        # Even if the gradient is used right away in any other layer we might keep in future versions of the project.
+        gradient = gradient.copy() 
         gradient[self.input <= 0] = 0
         return gradient 
 
-class SoftMax:
-    def forward(self, input: np.ndarray) -> np.ndarray:
-        # Compute the softmax output
-        exponantiated_output = np.exp(input - input.max())
-        self.input = input
-        self.output = exponantiated_output / exponantiated_output.sum()
-        return self.output
+class Sigmoid:
+    def forward(self, inputs:np.ndarray) -> np.ndarray:
+        self.outputs = 1 / (1 + np.exp(-inputs))
+        return self.outputs
 
-    def backward(self, d_output: np.ndarray, learning_rate:float) -> np.ndarray:
-        """
-        Compute the gradient of the loss with respect to the input of softmax.
-        
-        Parameters:
-        d_output (np.ndarray): Gradient of the loss with respect to the output of softmax.
-        
-        Returns:
-        np.ndarray: Gradient of the loss with respect to the input of softmax.
-        """
-        # Reshape softmax output to a column vector
-        y = self.output.reshape(-1, 1)  # Shape: (n, 1)
-        
-        # Compute the Jacobian matrix of softmax
-        jacobian = np.diagflat(y) - np.dot(y, y.T)  # Shape: (n, n)
-        
-        # Compute the gradient with respect to the input
-        d_input = np.dot(jacobian, d_output)  # Shape: (n,)
-        return d_input
+    def backward(self, gradients:np.ndarray, learning_rate:float) -> np.ndarray:
+        # Derivative - calculates from output of the sigmoid function
+        return gradients * (1 - self.outputs) * self.outputs
+
+#class SoftMax:
+#    def forward(self, input: np.ndarray) -> np.ndarray:
+#        # Compute the softmax output
+#        exponantiated_output = np.exp(input - input.max())
+#        self.input = input
+#        self.output = exponantiated_output / exponantiated_output.sum()
+#        return self.output
+#
+#    def backward(self, gradient: np.ndarray, learning_rate:float) -> np.ndarray:
+#        # Reshape softmax output to a column vector
+#        y = self.output.reshape(-1, 1)  # Shape: (n, 1)
+#        
+#        # Compute the Jacobian matrix of softmax
+#        jacobian = np.diagflat(y) - np.dot(y, y.T)  # Shape: (n, n)
+#        
+#        # Compute the gradient with respect to the input
+#        d_input = np.dot(jacobian, gradient)  # Shape: (n,)
+#        return d_input
