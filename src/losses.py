@@ -7,3 +7,10 @@ class BinaryCrossentropy:
 
     def backward(self, y_true: np.ndarray) -> np.ndarray:
         return - (y_true / self.y_pred - (1 - y_true) / (1 - self.y_pred))
+
+class MeanAbsoluteError:
+    def forward(self, y_pred: np.ndarray, y_true: np.ndarray) -> float:
+        return np.mean(np.abs(y_true - y_pred))
+
+    def backward(self, y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
+        return np.sign(y_pred - y_true)
