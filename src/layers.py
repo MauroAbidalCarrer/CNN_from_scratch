@@ -27,7 +27,7 @@ class Linear:
         # So instead, we make the matrix of shape (input_size, nb_neurons).
         self.weights = np.random.randn(input_size, output_size)
         # The parameter of the funciton is in parenthesis because it is a tuple of size one.
-        # We declare the biases as a column vector to perform addidtion to the batch (matix) output.
+        # We declare the biases as a column vector to perform broadcasted addidtion to the batch (matix) output.
         self.biases = np.zeros((1, output_size))
 
     def forward(self, input:np.ndarray) -> np.ndarray:
@@ -35,8 +35,9 @@ class Linear:
         return input @ self.weights + self.biases
 
     def backward(self, gradients:np.ndarray, learning_rate:float) -> np.ndarray:
-        self.weights -= self.input.T @ gradients * learning_rate
-        self.biases -= learning_rate * gradients.sum(axis=0, keepdims=True)
+        #print(gradients.shape)
+        self.weights -= self.input.T @ gradients * learning_rate / gradients.shape[0]
+        self.biases -= learning_rate * gradients.mean(axis=0, keepdims=True)
         return gradients @ self.weights.T
 
 class Relu:
