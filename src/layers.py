@@ -46,11 +46,7 @@ class Relu:
         return np.maximum(input, 0)
 
     def backward(self, gradient:np.ndarray, learning_rate:float) -> np.ndarray:
-        # Copy gradient to avoid modifying the original gradient.
-        # Even if the gradient is used right away in any other layer we might keep in future versions of the project.
-        gradient = gradient.copy() 
-        gradient[self.input <= 0] = 0
-        return gradient 
+        return np.where(self.input <= 0, 0, gradient)
 
 class Sigmoid:
     def forward(self, inputs:np.ndarray) -> np.ndarray:
