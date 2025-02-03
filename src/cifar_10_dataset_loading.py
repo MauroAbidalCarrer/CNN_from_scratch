@@ -1,0 +1,56 @@
+"""
+Script written by chatGPT (and then modified by me) to get the CIFAR-10 dataset
+"""
+import pickle
+import numpy as np
+from os import makedirs
+from os.path import dirname, join, exists
+import tarfile
+import urllib.request
+
+# URL to download CIFAR-10
+URL = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
+TAR_DATASET_FILENAME = "cifar-10-python.tar.gz"
+dataset_dir = "cifar-10-batches-py"
+dataset_dir = join(dirname(__file__), dataset_dir)
+compressed_dataset_path = join(dataset_dir, TAR_DATASET_FILENAME)
+
+if not exists(compressed_dataset_path):
+    makedirs(dirname(compressed_dataset_path), exist_ok=True)
+    print("Downloading CIFAR-10 dataset...")
+    urllib.request.urlretrieve(URL, compressed_dataset_path)
+    print("Extracting CIFAR-10 dataset...")
+    with tarfile.open(compressed_dataset_path, "r:gz") as tar:
+        tar.extractall()
+
+def load_batch(file):
+    with open(file, 'rb') as f:
+        batch = pickle.load(f, encoding='bytes')
+    data = batch[b'data']
+    labels = batch[b'labels']
+    return data.reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1), np.array(labels)
+
+def load_cifar_10() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    # Load all training batches
+    x_train, y_train = [], []
+    for i in range(1, 6):
+        file = join(dirname(__file__), dataset_dir, f"data_batch_{i}")
+        data, labels = load_batch(file)
+        x_train.append(data)
+        y_train.append(labels)
+
+    x_train = np.concatenate(x_train)
+    y_train = np.concatenate(y_train)
+
+    # Load test batch
+    x_test, y_test = load_batch(join(dirname(__file__), dataset_dir, "test_batch"))
+
+    return x_train, y_train, x_test, y_test
+
+if __name__ == "__main__":
+    x_train, y_train, x_test, y_test = load_cifar_10()
+    # Print shapes
+    print("Train data shape:", x_train.shape)  # (50000, 32, 32, 3)
+    print("Train labels shape:", y_train.shape)  # (50000,)
+    print("Test data shape:", x_test.shape)  # (10000, 32, 32, 3)
+    print("Test labels shape:", y_test.shape)  # (10000,)
