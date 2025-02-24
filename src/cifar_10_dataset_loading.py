@@ -23,13 +23,6 @@ if not exists(compressed_dataset_path):
     with tarfile.open(compressed_dataset_path, "r:gz") as tar:
         tar.extractall()
 
-def load_batch(file):
-    with open(file, 'rb') as f:
-        batch = pickle.load(f, encoding='bytes')
-    data = batch[b'data']
-    labels = batch[b'labels']
-    return data.reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1), np.array(labels)
-
 def load_cifar_10() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     # Load all training batches
     x_train, y_train = [], []
@@ -46,6 +39,16 @@ def load_cifar_10() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     x_test, y_test = load_batch(join(dirname(__file__), dataset_dir, "test_batch"))
 
     return x_train, y_train, x_test, y_test
+
+def load_batch(file):
+    with open(file, 'rb') as f:
+        batch = pickle.load(f, encoding='bytes')
+    data = batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
+    labels = one_hot_encode_labels(np.array(batch[b'labels']))
+    return data, labels
+
+def one_hot_encode_labels(label_idxs:np.ndarray) -> np.ndarray:
+    return np.eye(10)[label_idxs]
 
 if __name__ == "__main__":
     x_train, y_train, x_test, y_test = load_cifar_10()
