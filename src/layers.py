@@ -2,6 +2,7 @@
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view as sliding_views
 
+
 DEFAULT_WEIGHS_SCALING = 0.001
 
 class Convolutional:
@@ -54,7 +55,6 @@ class Linear:
         return input @ self.weights + self.biases
 
     def backward(self, gradients:np.ndarray, learning_rate:float) -> np.ndarray:
-        #print(gradients.shape)
         self.weights -= self.input.T @ gradients * learning_rate / gradients.shape[0]
         self.biases -= learning_rate * gradients.mean(axis=0, keepdims=True)
         return gradients @ self.weights.T
@@ -69,7 +69,8 @@ class Relu:
 
 class Sigmoid:
     def forward(self, inputs:np.ndarray) -> np.ndarray:
-        self.outputs = 1 / (1 + np.exp(-inputs))
+        clipped_inputs = np.clip(inputs, -500, 500)  # Clip the values to avoid overflow
+        self.outputs = 1 / (1 + np.exp(-clipped_inputs))
         return self.outputs
 
     def backward(self, gradients:np.ndarray, learning_rate:float) -> np.ndarray:
