@@ -75,3 +75,44 @@ class Sigmoid:
 
     def backward(self, gradients:np.ndarray, learning_rate:float) -> np.ndarray:
         return gradients * (1 - self.outputs) * self.outputs
+
+
+
+class Softmax:
+    def __init__(self):
+        # Will store the softmax output computed in the forward pass
+        self.out = None
+
+    def forward(self, inputs: np.ndarray) -> np.ndarray:
+        """
+        Compute the softmax of the input batch in a numerically stable way.
+        
+        Args:
+            inputs (np.ndarray): Input array of shape (batch_size, num_classes).
+        
+        Returns:
+            np.ndarray: Softmax probabilities of the same shape as inputs.
+        """
+        # Shift inputs by subtracting the maximum value in each row for numerical stability
+        exp_shifted = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
+        self.out = exp_shifted / np.sum(exp_shifted, axis=1, keepdims=True)
+        return self.out
+
+    def backward(self, gradients: np.ndarray, learning_rate:float) -> np.ndarray:
+        """
+        Compute the gradient of the loss with respect to the input of the softmax,
+        given the gradient with respect to the output (upstream gradient).
+        
+        Args:
+            gradients (np.ndarray): Upstream gradients with shape (batch_size, num_classes).
+        
+        Returns:
+            np.ndarray: Gradient with respect to the input of softmax.
+        """
+        # For each sample in the batch, the gradient of the softmax is:
+        # dL/dz = s * (grad - sum(grad * s))
+        # where s is the softmax output for that sample.
+        sum_grad = np.sum(gradients * self.out, axis=1, keepdims=True)
+        grad_input = self.out * (gradients - sum_grad)
+        return grad_input
+
