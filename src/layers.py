@@ -12,27 +12,27 @@ class Convolutional:
 
     def forward(self, inputs:np.ndarray) -> np.ndarray:
         self.inputs = inputs
-        return valid_correlate(inputs, self.kernels) + self.biases
+        return Convolutional.valid_correlate(inputs, self.kernels) + self.biases
 
     def backward(self, gradients:np.ndarray, learning_rate:float) -> np.ndarray:
         self.biases -= gradients.mean(axis=(0, 1, 2), keepdims=True) * learning_rate
-        gradient_wrt_kernels = valid_correlate(
+        gradient_wrt_kernels = Convolutional.valid_correlate(
             self.inputs.swapaxes(0, 3),
             gradients.swapaxes(0, 3),
         )
         self.kernels -= gradient_wrt_kernels.swapaxes(0, 3) * learning_rate
-        return full_convolve(gradients, self.kernels.swapaxes(0, 3))
+        return Convolutional.full_convolve(gradients, self.kernels.swapaxes(0, 3))
+    
+    @classmethod
+    def full_convolve(cls, inputs:np.ndarray, k:np.ndarray) -> np.ndarray:
+        pad = ((0, 0), (k.shape[1]-1, k.shape[1]-1), (k.shape[2]-1, k.shape[2]-1), (0, 0))
+        return Convolutional.valid_correlate(np.pad(inputs, pad), np.flip(k, (1, 2)))
 
-def full_convolve(inputs:np.ndarray, k:np.ndarray) -> np.ndarray:
-    pad = ((0, 0), (k.shape[1]-1, k.shape[1]-1), (k.shape[2]-1, k.shape[2]-1), (0, 0))
-    return valid_correlate(np.pad(inputs, pad, "constant"), np.flip(k, (1, 2)))
-
-def valid_correlate(inputs:np.ndarray, k:np.ndarray) -> np.ndarray:
-    return np.einsum(
-        "bijcxy, kxyc -> bijk",
-        sliding_views(inputs, k.shape[1:3], (1, 2)),
-        k
-    )
+    @classmethod
+    def valid_correlate(cls, inputs:np.ndarray, k:np.ndarray) -> np.ndarray:
+        views = sliding_views(inputs, k.shape[1:3], (1, 2))
+        correlations = np.tensordot(views, k, axes=([3, 4, 5], [3, 1, 2]))
+        return correlations
 
 class Flatten:
     def forward(self, inputs:np.ndarray) -> np.ndarray:
@@ -76,39 +76,18 @@ class Sigmoid:
     def backward(self, gradients:np.ndarray, learning_rate:float) -> np.ndarray:
         return gradients * (1 - self.outputs) * self.outputs
 
-
-
 class Softmax:
     def __init__(self):
         # Will store the softmax output computed in the forward pass
         self.out = None
 
     def forward(self, inputs: np.ndarray) -> np.ndarray:
-        """
-        Compute the softmax of the input batch in a numerically stable way.
-        
-        Args:
-            inputs (np.ndarray): Input array of shape (batch_size, num_classes).
-        
-        Returns:
-            np.ndarray: Softmax probabilities of the same shape as inputs.
-        """
         # Shift inputs by subtracting the maximum value in each row for numerical stability
         exp_shifted = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
         self.out = exp_shifted / np.sum(exp_shifted, axis=1, keepdims=True)
         return self.out
 
     def backward(self, gradients: np.ndarray, learning_rate:float) -> np.ndarray:
-        """
-        Compute the gradient of the loss with respect to the input of the softmax,
-        given the gradient with respect to the output (upstream gradient).
-        
-        Args:
-            gradients (np.ndarray): Upstream gradients with shape (batch_size, num_classes).
-        
-        Returns:
-            np.ndarray: Gradient with respect to the input of softmax.
-        """
         # For each sample in the batch, the gradient of the softmax is:
         # dL/dz = s * (grad - sum(grad * s))
         # where s is the softmax output for that sample.
