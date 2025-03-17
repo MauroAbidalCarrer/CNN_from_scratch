@@ -41,49 +41,37 @@ class MaxPool:
 
     def forward(self, x):
         N, W, H, C = x.shape
-
         # Ensure that width and height are divisible by the pooling dimensions.
         assert W % self.pool_height == 0, "Input width must be divisible by pool height"
         assert H % self.pool_width == 0, "Input height must be divisible by pool width"
-
         out_W = W // self.pool_height
         out_H = H // self.pool_width
-
         # Reshape the input so that we can perform pooling over the appropriate dimensions.
         # New shape: (N, out_W, pool_height, out_H, pool_width, C)
         x_reshaped = x.reshape(N, out_W, self.pool_height, out_H, self.pool_width, C)
-
         # Compute the maximum over the pooling regions (axes 2 and 4)
         out = np.max(x_reshaped, axis=(2, 4))
-
         # Cache values needed for the backward pass.
         self.cache = (x, x_reshaped, out)
         return out
 
-    def backward(self, dout,  learning_rage:float):
+    def backward(self, gradients:np.ndarray, learning_rate:float) -> np.ndarray:
         x, x_reshaped, out = self.cache
         N, out_W, pool_h, out_H, pool_w, C = x_reshaped.shape
-
         # Expand the pooled output to the shape of x_reshaped for comparison.
         # out_expanded has shape: (N, out_W, 1, out_H, 1, C)
         out_expanded = out[:, :, np.newaxis, :, np.newaxis, :]
-
         # Create a mask: True at positions that contributed to the max.
         mask = (x_reshaped == out_expanded)
-
         # Count the number of maximum entries in each pooling region for proper gradient distribution.
         mask_sum = np.sum(mask, axis=(2, 4), keepdims=True)
-
         # Expand the upstream gradient to match the dimensions of the pooling regions.
-        dout_expanded = dout[:, :, np.newaxis, :, np.newaxis, :]
-
+        dout_expanded = gradients[:, :, np.newaxis, :, np.newaxis, :]
         # Distribute the gradient: if there are ties, the gradient is divided equally.
         dx_reshaped = mask * (dout_expanded / mask_sum)
-
         # Reshape back to the original input dimensions.
         dx = dx_reshaped.reshape(x.shape)
         return dx
-    
 
 class Flatten:
     def forward(self, inputs:np.ndarray) -> np.ndarray:
