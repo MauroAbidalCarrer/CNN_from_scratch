@@ -1,7 +1,20 @@
+from abc import ABC, abstractmethod
+
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view as sliding_views
 
 from constants import DEFAULT_WEIGHTS_SCALING
+
+
+class Layer(ABC):
+    @abstractmethod
+    def forward(self, inputs:np.ndarray) -> np.ndarray:
+        pass
+
+    @abstractmethod
+    def bacwkard(self, gradients:np.ndarray) -> tuple[np.ndarray, dict[np.ndarray]]:
+        """Returns a tuple of the input gradient and dict of the gradients wrt params."""
+        pass
 
 class Convolutional:
     def __init__(self, kernels_shape:tuple, weights_scaling:float=DEFAULT_WEIGHTS_SCALING):

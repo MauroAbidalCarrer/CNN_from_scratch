@@ -1,7 +1,18 @@
+from abc import ABC, abstractmethod
+
 import numpy as np
 
+class Loss(ABC):
+    @abstractmethod
+    def forward(self, y_pred:np.ndarray, y_true:np.ndarray) -> float:
+        pass
+
+    @abstractmethod
+    def backward(self, y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
+        pass
+
 class BinaryCrossentropy:
-    def forward(self, y_pred: np.ndarray, y_true: np.ndarray) -> float:
+    def forward(self, y_pred:np.ndarray, y_true:np.ndarray) -> float:
         y_pred = np.clip(y_pred, 1e-7, 1 - 1e-7)
         return -(y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred)).mean()
 
