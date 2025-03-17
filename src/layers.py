@@ -1,12 +1,10 @@
-# This import block is beautifull
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view as sliding_views
 
-
-DEFAULT_WEIGHS_SCALING = 0.001
+from constants import DEFAULT_WEIGHTS_SCALING
 
 class Convolutional:
-    def __init__(self, kernels_shape:tuple, weights_scaling:float=DEFAULT_WEIGHS_SCALING):
+    def __init__(self, kernels_shape:tuple, weights_scaling:float=DEFAULT_WEIGHTS_SCALING):
         self.kernels = np.random.rand(*kernels_shape) * weights_scaling
         self.biases = np.zeros((1, 1, 1, kernels_shape[0]))
 
@@ -82,7 +80,8 @@ class Flatten:
         return gradients.reshape(*self.inputs_shape)
 
 class Linear:
-    def __init__(self, input_size:int, output_size:int, weights_scaling:float=DEFAULT_WEIGHS_SCALING):
+    params = ["weights", "biases"]
+    def __init__(self, input_size:int, output_size:int, weights_scaling:float=DEFAULT_WEIGHTS_SCALING):
         # Since we are using batches of inputs and performing matrix multiplication on them and that
         # because matMul performs the dot product on the rows of the first(input) matrix and the (neurons) columms of the second
         self.weights = np.random.randn(input_size, output_size) * weights_scaling
@@ -116,10 +115,6 @@ class Sigmoid:
         return gradients * (1 - self.outputs) * self.outputs
 
 class Softmax:
-    def __init__(self):
-        # Will store the softmax output computed in the forward pass
-        self.out = None
-
     def forward(self, inputs: np.ndarray) -> np.ndarray:
         # Shift inputs by subtracting the maximum value in each row for numerical stability
         exp_shifted = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
