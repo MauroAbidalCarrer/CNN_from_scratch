@@ -4,11 +4,8 @@
   - max pool
   - Almost successfully trained on 7 samples cifar10.  
     Reached accuracy of 100% and then it seems like the gradients explode  
-
-13/03/2024: 
 - Added layers weights means as metrics in traing stats df.  
   They seem to confirm that the gradients AND the weights increasing and then exploding.  
-- batch norm  
 
 17/03/2025:  
 - Watched these videos about softmax:  
@@ -26,3 +23,11 @@
 - Tested SGD_with_decay on 10 samples of cifar10, it converges int [400, 700] epochs and then diverges.
   I can't get it to stay at a minimum loss/accuracy...
   I will try to implement Addam to see if I can get it to converge and stay at a satisfactory loss minima/accuracy maximum.
+  Actually I am first going to try to fit an nn with:
+    - [Flatten, Conv, Softmax] This is to make sure that the issues I am encountering in the cnn's training are not a direct cause to some bad Conv implementation
+      It's not working, it just stagnates or has big unexpected/e=unexplicable jumps in loss but never converges
+    - [Flatten, Linear, Sigmoid] To see if the issues encountered in the training of the single conv layer cnn are caused by the Conv layer since a conv layer of the same shape as its input is (if I am not mitaken) the same as a Linear layer.
+      And........... it's also not working -_-, it exhibits the same weird training patterns.
+      I am assuming this is due to something else then, maybe the loss?
+      By looking into it, it turns out that the gradients are so absurdly small that the substraction (that I have perfomed in a notebook just to be sure) gives the same param.
+      *I also noted that the single Linear layer nn is ~40x faster than the single Conv layer nn so I will definetly look into (yet another) better Conv implementation.*
