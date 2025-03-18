@@ -10,13 +10,13 @@ from losses import Loss
 
 class SGD:
     def __init__(self, learning_rate:float):
-        self.learning_rate = learning_rate
+        self._learning_rate = learning_rate
+        self.iterations = 0
+        self.training_metrics:list[dict] = []
 
     # Only works for categorical datasets for now
-    def optimize_nn(self, nn:list[Layer], x:ndarray, y:ndarray, epochs:int, batch_size:int, loss:Loss, score_funcs:dict[callable], metric_freq:int=1) -> DF:
+    def optimize_nn(self, nn:list[Layer], x:ndarray, y:ndarray, epochs:int, batch_size:int, loss:Loss, score_funcs:list[callable], metric_freq:int=1) -> DF:
         """Optimizes the neural network and returns a dataframe of the training mmetrics."""
-        self.iterations = 0
-        training_metrics:list[dict] = []
         for epoch in track(range(epochs), description="Training..."):
             # Perfomr steps
             for batch_i in range(0, x.shape[0], batch_size):
@@ -29,12 +29,14 @@ class SGD:
             # Compute and store new trainging metrics
             if not epoch % metric_freq:
                 y_pred = SGD.forward(nn, x)
-                training_metrics.append({
+                self.training_metrics.append({
+                    "iteration": self.iterations,
                     "epoch": epoch,
                     "loss": loss.forward(y_pred, y),
+                    "learning_rate": self.learning_rate,
                     **{score_func.__name__: score_func(y_pred, y) for score_func in score_funcs},
                 })
-        return DF.from_records(training_metrics)
+        return DF.from_records(self.training_metrics)
 
     # Forward is implemented in SGD because it's the only place it's used, eventually it will be in a NueralNetwork module.
     @classmethod
@@ -57,14 +59,19 @@ class SGD:
     def compute_gradient_wrt_param(self, layer:Layer, param_name:str, gradient_wrt_param:ndarray) -> ndarray:
         return self.learning_rate * gradient_wrt_param
 
+    @property
+    def learning_rate(self) -> float:
+        return self._learning_rate
+
 class SGD_with_decay(SGD):
     def __init__(self, starting_lr:float, lr_decay:float):
-        super(SGD, self).__init__(starting_lr)
-        self.decay = lr_decay
+        self.starting_lr = starting_lr
+        self.lr_decay = lr_decay
+        super().__init__(starting_lr)
 
     @property
     def learning_rate(self) -> float:
-        return self.starting_learning_rate / (1 + self.learning_rate_decay * self.iterations)
+        return self.starting_lr / (1 + self.lr_decay * self.iterations)
     
 # class SGD_with_momentum(SGD_with_decay):
 #     def __init__(self, starting_lr: float, lr_decay: float, momentum:float):
