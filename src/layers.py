@@ -26,7 +26,7 @@ class Convolutional:
         self.inputs = inputs
         return Convolutional.valid_correlate(inputs, self.kernels) + self.biases
 
-    def backward(self, gradients:ndarray, learning_rate:float) -> ndarray:
+    def backward(self, gradients:ndarray) -> ndarray:
         gradient_wrt_kernels = Convolutional.valid_correlate(
             self.inputs.swapaxes(0, 3),
             gradients.swapaxes(0, 3),
@@ -69,7 +69,7 @@ class MaxPool:
         self.cache = (x, x_reshaped, out)
         return out
 
-    def backward(self, gradients:ndarray, learning_rate:float) -> ndarray:
+    def backward(self, gradients:ndarray) -> ndarray:
         x, x_reshaped, out = self.cache
         N, out_W, pool_h, out_H, pool_w, C = x_reshaped.shape
         # Expand the pooled output to the shape of x_reshaped for comparison.
@@ -92,7 +92,7 @@ class Flatten:
         self.inputs_shape = inputs.shape
         return inputs.reshape(inputs.shape[0], -1)
 
-    def backward(self, gradients:ndarray, learning_rate:float) -> ndarray:
+    def backward(self, gradients:ndarray) -> ndarray:
         return {"inputs": gradients.reshape(*self.inputs_shape)}
 
 class Linear:
