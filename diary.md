@@ -18,3 +18,11 @@
   It's also an affine transformation after that.
   Its implementation is a bit more complicated than I thought it would be...
   Might switch to implementing the adam optimzer instead...
+- Reread the NNFS chapters on optimizers
+- Started implementing SGD and SGD_with_decay and refactoring layers to work with it.
+
+18/03/2025:
+- Tested refacto on mnist notebook, works fine :thumbsup:.
+- Tested SGD_with_decay on 10 samples of cifar10, it converges int [400, 700] epochs and then diverges.
+  I can't get it to stay at a minimum loss/accuracy...
+  I will try to implement Addam to see if I can get it to converge and stay at a satisfactory loss minima/accuracy maximum.
