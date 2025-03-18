@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 import numpy as np
+from numpy import ndarray
 from numpy.lib.stride_tricks import sliding_window_view as sliding_views
 
 from constants import DEFAULT_WEIGHTS_SCALING
@@ -8,12 +9,12 @@ from constants import DEFAULT_WEIGHTS_SCALING
 
 class Layer(ABC):
     @abstractmethod
-    def forward(self, inputs:np.ndarray) -> np.ndarray:
+    def forward(self, inputs:ndarray) -> ndarray:
         pass
 
     @abstractmethod
-    def bacwkard(self, gradients:np.ndarray) -> tuple[np.ndarray, dict[np.ndarray]]:
-        """Returns a tuple of the input gradient and dict of the gradients wrt params."""
+    def backward(self, gradients:ndarray) -> ndarray|dict[str, ndarray]:
+        """Returns a dict of the gradients wrt params and inputs."""
         pass
 
 class Convolutional:
@@ -21,32 +22,34 @@ class Convolutional:
         self.kernels = np.random.rand(*kernels_shape) * weights_scaling
         self.biases = np.zeros((1, 1, 1, kernels_shape[0]))
 
-    def forward(self, inputs:np.ndarray) -> np.ndarray:
+    def forward(self, inputs:ndarray) -> ndarray:
         self.inputs = inputs
         return Convolutional.valid_correlate(inputs, self.kernels) + self.biases
 
-    def backward(self, gradients:np.ndarray, learning_rate:float) -> np.ndarray:
-        self.biases -= gradients.mean(axis=(0, 1, 2), keepdims=True) * learning_rate
+    def backward(self, gradients:ndarray, learning_rate:float) -> ndarray:
         gradient_wrt_kernels = Convolutional.valid_correlate(
             self.inputs.swapaxes(0, 3),
             gradients.swapaxes(0, 3),
         )
-        self.kernels -= gradient_wrt_kernels.swapaxes(0, 3) * learning_rate
-        return Convolutional.full_convolve(gradients, self.kernels.swapaxes(0, 3))
+        return {
+            "biases": gradients.mean(axis=(0, 1, 2), keepdims=True),
+            "kernels": gradient_wrt_kernels.swapaxes(0, 3),
+            "inputs": Convolutional.full_convolve(gradients, self.kernels.swapaxes(0, 3)),
+        }
     
     @classmethod
-    def full_convolve(cls, inputs:np.ndarray, k:np.ndarray) -> np.ndarray:
+    def full_convolve(cls, inputs:ndarray, k:ndarray) -> ndarray:
         pad = ((0, 0), (k.shape[1]-1, k.shape[1]-1), (k.shape[2]-1, k.shape[2]-1), (0, 0))
         return Convolutional.valid_correlate(np.pad(inputs, pad), np.flip(k, (1, 2)))
 
     @classmethod
-    def valid_correlate(cls, inputs:np.ndarray, k:np.ndarray) -> np.ndarray:
+    def valid_correlate(cls, inputs:ndarray, k:ndarray) -> ndarray:
         views = sliding_views(inputs, k.shape[1:3], (1, 2))
         correlations = np.tensordot(views, k, axes=([3, 4, 5], [3, 1, 2]))
         return correlations
 
 class MaxPool:
-    def __init__(self, kernel_shape):
+    def __init__(self, kernel_shape:tuple[int, int]):
         self.pool_height, self.pool_width = kernel_shape
         self.cache = None
 
@@ -66,7 +69,7 @@ class MaxPool:
         self.cache = (x, x_reshaped, out)
         return out
 
-    def backward(self, gradients:np.ndarray, learning_rate:float) -> np.ndarray:
+    def backward(self, gradients:ndarray, learning_rate:float) -> ndarray:
         x, x_reshaped, out = self.cache
         N, out_W, pool_h, out_H, pool_w, C = x_reshaped.shape
         # Expand the pooled output to the shape of x_reshaped for comparison.
@@ -82,18 +85,17 @@ class MaxPool:
         dx_reshaped = mask * (dout_expanded / mask_sum)
         # Reshape back to the original input dimensions.
         dx = dx_reshaped.reshape(x.shape)
-        return dx
+        return {"inputs": dx}
 
 class Flatten:
-    def forward(self, inputs:np.ndarray) -> np.ndarray:
+    def forward(self, inputs:ndarray) -> ndarray:
         self.inputs_shape = inputs.shape
         return inputs.reshape(inputs.shape[0], -1)
 
-    def backward(self, gradients:np.ndarray, learning_rate:float) -> np.ndarray:
-        return gradients.reshape(*self.inputs_shape)
+    def backward(self, gradients:ndarray, learning_rate:float) -> ndarray:
+        return {"inputs": gradients.reshape(*self.inputs_shape)}
 
 class Linear:
-    params = ["weights", "biases"]
     def __init__(self, input_size:int, output_size:int, weights_scaling:float=DEFAULT_WEIGHTS_SCALING):
         # Since we are using batches of inputs and performing matrix multiplication on them and that
         # because matMul performs the dot product on the rows of the first(input) matrix and the (neurons) columms of the second
@@ -101,44 +103,46 @@ class Linear:
         # We declare the biases as a column vector to perform broadcasted addidtion to the batch (matix) output.
         self.biases = np.zeros((1, output_size))
 
-    def forward(self, input:np.ndarray) -> np.ndarray:
+    def forward(self, input:ndarray) -> ndarray:
         self.input = input
         return input @ self.weights + self.biases
 
-    def backward(self, gradients:np.ndarray, learning_rate:float) -> np.ndarray:
-        self.weights -= self.input.T @ gradients * learning_rate / gradients.shape[0]
-        self.biases -= learning_rate * gradients.mean(axis=0, keepdims=True)
-        return gradients @ self.weights.T
+    def backward(self, gradients:ndarray) -> ndarray:
+        return {
+            "inputs": gradients @ self.weights.T,
+            "weights": self.input.T @ gradients / gradients.shape[0],
+            "biases": gradients.mean(axis=0, keepdims=True),
+        }
 
 class Relu:
-    def forward(self, input:np.ndarray) -> np.ndarray:
+    def forward(self, input:ndarray) -> ndarray:
         self.input = input
         return np.maximum(input, 0)
 
-    def backward(self, gradients:np.ndarray, learning_rate:float) -> np.ndarray:
-        return np.where(self.input <= 0, 0, gradients)
+    def backward(self, gradients:ndarray) -> ndarray:
+        return {"inputs": np.where(self.input <= 0, 0, gradients)}
 
 class Sigmoid:
-    def forward(self, inputs:np.ndarray) -> np.ndarray:
+    def forward(self, inputs:ndarray) -> ndarray:
         clipped_inputs = np.clip(inputs, -500, 500)  # Clip the values to avoid overflow
         self.outputs = 1 / (1 + np.exp(-clipped_inputs))
         return self.outputs
 
-    def backward(self, gradients:np.ndarray, learning_rate:float) -> np.ndarray:
-        return gradients * (1 - self.outputs) * self.outputs
+    def backward(self, gradients:ndarray) -> ndarray:
+        return {"inputs": gradients * (1 - self.outputs) * self.outputs}
 
 class Softmax:
-    def forward(self, inputs: np.ndarray) -> np.ndarray:
+    def forward(self, inputs: ndarray) -> ndarray:
         # Shift inputs by subtracting the maximum value in each row for numerical stability
         exp_shifted = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
         self.out = exp_shifted / np.sum(exp_shifted, axis=1, keepdims=True)
         return self.out
 
-    def backward(self, gradients: np.ndarray, learning_rate:float) -> np.ndarray:
+    def backward(self, gradients: ndarray) -> ndarray:
         # For each sample in the batch, the gradient of the softmax is:
         # dL/dz = s * (grad - sum(grad * s))
         # where s is the softmax output for that sample.
         sum_grad = np.sum(gradients * self.out, axis=1, keepdims=True)
         grad_input = self.out * (gradients - sum_grad)
-        return grad_input
+        return {"inputs": grad_input}
 
