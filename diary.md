@@ -31,3 +31,10 @@
       I am assuming this is due to something else then, maybe the loss?
       By looking into it, it turns out that the gradients are so absurdly small that the substraction (that I have perfomed in a notebook just to be sure) gives the same param.
       *I also noted that the single Linear layer nn is ~40x faster than the single Conv layer nn so I will definetly look into (yet another) better Conv implementation.*
+      Since there is only a Sigmoid 
+
+19/03/2025:
+- Ok so it turns out that the learning rate was just too high, I set it to 0.03 and it works just fine with the [Flatten, Linear, Softmax] nn.
+  However, it does not converge with the conv layer which, again is weird since it should be exactly the same thing...
+  The [Flatten, Conv, Softmax] nn required a 0.0005 starting lr and a 0.005 lr decay where as the [Flatten, Linear, Softmax] nn didn't even need lr decay...
+  I believe this is worth investing, let's see if this is caused by my implementation or an actual/real property of Conv layers . 
