@@ -1,3 +1,4 @@
+from itertools import accumulate
 from functools import reduce
 
 import numpy as np
@@ -8,6 +9,7 @@ from pandas import DataFrame as DF
 from layers import Layer
 from losses import Loss
 
+
 class SGD:
     def __init__(self, learning_rate:float):
         self._learning_rate = learning_rate
@@ -15,15 +17,16 @@ class SGD:
         self.training_metrics:list[dict] = []
 
     # Only works for categorical datasets for now
-    def optimize_nn(self, nn:list[Layer], x:ndarray, y:ndarray, epochs:int, batch_size:int, loss:Loss, score_funcs:list[callable], metric_freq:int=1) -> DF:
-        """Optimizes the neural network and returns a dataframe of the training mmetrics."""
-        for epoch in track(range(epochs), description="Training..."):
-            # Perfomr steps
+    def optimize_nn(self, nn:list[Layer], x:ndarray, y:ndarray, epochs:int, batch_size:int, loss:Loss, score_funcs:list[callable], metric_freq:int=1, use_track=True) -> DF:
+        """Optimizes the neural network and returns a dataframe of the training metrics."""
+        it = track(range(epochs), description="Training...") if use_track else range(epochs)
+        for epoch in it:
+            # Perform steps
             for batch_i in range(0, x.shape[0], batch_size):
                 batch_x = x[batch_i:batch_i+batch_size]
                 batch_y = y[batch_i:batch_i+batch_size]
-                batch_y_pred = SGD.forward(nn, batch_x)
-                batch_gradients = loss.backward(batch_y_pred, batch_y)
+                batch_y_preds = SGD.forward(nn, batch_x)
+                batch_gradients = loss.backward(batch_y_preds, batch_y)
                 self.update_params(batch_gradients, nn)
                 self.iterations += 1
             # Compute and store new trainging metrics
@@ -43,20 +46,17 @@ class SGD:
     def forward(cls, nn:list[Layer], inputs:ndarray) -> ndarray:
         return reduce(lambda x, l: l.forward(x), nn, inputs)
 
-    def update_params(self, next_layer_gradients:ndarray, nn:list[Layer]):
+    def update_params(self, outputs_gradients:ndarray, nn:list[Layer]):
         for layer in reversed(nn):
-            gradients = layer.backward(next_layer_gradients)
+            gradients:dict = layer.backward(outputs_gradients)
+            inputs_grad = gradients.pop("inputs")
             for param_name, grads_wrt_param in gradients.items():
-                if param_name != "inputs":
-                    param = getattr(layer, param_name)
-                    setattr(
-                        layer,
-                        param_name,
-                        param - self.compute_gradient_wrt_param(layer, param_name, grads_wrt_param)
-                    )
-            next_layer_gradients = gradients["inputs"]
+                param:ndarray = getattr(layer, param_name)
+                gradient_wrt_param = self.postprocess_gradient(layer, param_name, grads_wrt_param)
+                setattr(layer, param_name, param - gradient_wrt_param)
+            outputs_gradients = inputs_grad
 
-    def compute_gradient_wrt_param(self, layer:Layer, param_name:str, gradient_wrt_param:ndarray) -> ndarray:
+    def postprocess_gradient(self, layer:Layer, param_name:str, gradient_wrt_param:ndarray) -> ndarray:
         return self.learning_rate * gradient_wrt_param
 
     @property
