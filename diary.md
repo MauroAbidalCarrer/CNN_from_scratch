@@ -50,3 +50,14 @@
   at 3000 samples: `@` takes more time than `tensordot`.
   So I will stay with the tensordot implementation.
 - I will now get back to fitting the [2x[Convolutional, Relu, MaxPool], Flatten, Linear, Relu, Linear, Softmax] nn on htethe 10 samples cifar10 subset.
+  Before starting to implement Adam I tried the following:
+    - training a new nn 4 times, 
+    - checking the iteration where the convergence point happens.
+    - averaging the convergence iteration point
+    - getting the learning cumsum up to this point
+    - declaring a desired learning rate at this point as the learning rate at this convergence point dvided by an arbitrary denominator
+    - computing the starting lr and lr decay based on the desired lr cumsum and desireed lr at the convergence point.
+    I tried it multiple times but it never worked...
+- I looked at [this notebook](https://www.kaggle.com/code/valentynsichkar/convolutional-neural-network-from-scratch-cifar10#Creating-Convolutional-Neural-Network-Model).
+  Interesingly enough it uses only one 32 filters conv layer and two FC layers 
+- Ok, I will start to implement Adam once and for all...
