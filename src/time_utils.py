@@ -41,3 +41,7 @@ def time_to_exec(message:str, print_msg=False):
         time_dict[message] = execution_time
     else:
         time_dict[message] += execution_time
+
+def reset_time_dict():
+    global time_dict
+    time_dict = {}
