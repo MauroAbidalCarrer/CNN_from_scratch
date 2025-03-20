@@ -61,3 +61,6 @@
 - I looked at [this notebook](https://www.kaggle.com/code/valentynsichkar/convolutional-neural-network-from-scratch-cifar10#Creating-Convolutional-Neural-Network-Model).
   Interesingly enough it uses only one 32 filters conv layer and two FC layers 
 - Ok, I will start to implement Adam once and for all...
+  Implemented SGD_with_momentum, it works, the mnist MLP converges faster with it... but it doesn't help me fit the nn to the cifar10 subset .
+  I do not a different loss curve in the cifar10 subset nn training after the convergence point but nothing seems to change before...
+  I will now start implementing AdaGrad.
