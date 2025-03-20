@@ -42,3 +42,11 @@
 - Still, I can't get the [2x[Convolutional, Relu, MaxPool], Flatten, Linear, Relu, Linear, Softmax] nn to converge.
   I tried to tweak the starting lr and lr decay for 1-2 hours and it never got above 50% accuracy within ~400 / 1000 epochs.
   Currently it takes about 35 seconds to train the nn for 400 epcohs, lets try to improve this.
+- I implemented a function that is ~30% faster than the tensordot current implementation with the 6 samples in the notebook.
+
+20/03/2025:
+- Testing the new cross corr implementation on 300 and 3000 samples, it is actually slower in both cases:
+  at 300 samples: `@` and `tensordot` take the same amount of time but computing and flattening the views takes more time (obviously) than just computing the views.
+  at 3000 samples: `@` takes more time than `tensordot`.
+  So I will stay with the tensordot implementation.
+- I will now get back to fitting the [2x[Convolutional, Relu, MaxPool], Flatten, Linear, Relu, Linear, Softmax] nn on htethe 10 samples cifar10 subset.
