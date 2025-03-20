@@ -8,7 +8,7 @@ from pandas import DataFrame as DF
 
 from layers import Layer
 from losses import Loss
-
+from constants import EPSILON
 
 class SGD:
     def __init__(self, learning_rate:float):
@@ -83,3 +83,14 @@ class SGD_with_momentum(SGD_with_decay):
         post_processed_gradient_wrt_param = self.learning_rate * gradient_wrt_param + param_momentum * self.momentum
         setattr(layer, param_name + "_momentum", post_processed_gradient_wrt_param)
         return post_processed_gradient_wrt_param
+
+class RMSprop(SGD_with_decay):
+    def __init__(self, starting_lr:float, lr_decay:float, rho:float):
+        self.rho = rho
+        super().__init__(starting_lr, lr_decay)
+
+    def postprocess_gradient(self, layer:Layer, param_name:str, param:ndarray, gradient_wrt_param:ndarray) -> ndarray:
+        param_cache = getattr(layer, param_name + "_cache", np.zeros_like(param))
+        param_cache = self.rho * param_cache + (1 - self.rho) * gradient_wrt_param ** 2
+        setattr(layer, param_name + "_cache", param_cache)
+        return self.learning_rate * gradient_wrt_param / (np.sqrt(param_cache) + EPSILON)
