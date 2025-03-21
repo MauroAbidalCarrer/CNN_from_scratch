@@ -5,7 +5,7 @@
   - Almost successfully trained on 7 samples cifar10.  
     Reached accuracy of 100% and then it seems like the gradients explode  
 - Added layers weights means as metrics in traing stats df.  
-  They seem to confirm that the gradients AND the weights increasing and then exploding.  
+  They seem to confirm that the gradients AND the weights are increasing and then exploding.  
 
 17/03/2025:  
 - Watched these videos about softmax:  
@@ -64,3 +64,8 @@
   Implemented SGD_with_momentum, it works, the mnist MLP converges faster with it... but it doesn't help me fit the nn to the cifar10 subset .
   I do not a different loss curve in the cifar10 subset nn training after the convergence point but nothing seems to change before...
   I will now start implementing AdaGrad.
+  I implemented SGD_with_momentum and RMSprop.
+
+21/03/2025:
+- Implemented Adam optimizer.
+  It improved the mnist score training accuracy from 0.93to 0.98!
