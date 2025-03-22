@@ -70,3 +70,7 @@
 - Implemented Adam optimizer.
   It improved the mnist score training accuracy from 0.93to 0.98!
   Damn it fitted the [2x[Convolutional, Relu, MaxPool], Flatten, Linear, Relu, Linear, Softmax] nn on the 10 samples cifar10 subset first try in 37 epochs wtf!!
+
+22/03/2025:
+- Getting ~60% on 100 samples cifar10 subset with the same nn and Adam
+- Reached  80% by tweaking the Adam hyperparameters (mostly starting_lr and lr_decay).
