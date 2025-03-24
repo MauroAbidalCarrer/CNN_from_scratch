@@ -76,12 +76,19 @@
 - Started watching this [video](https://www.youtube.com/watch?v=7Q2JhZxNPow&ab_channel=SimonsInstitute)
 - Getting ~60% on 100 samples cifar10 subset with the same nn and Adam
 - Reached  80% by tweaking the Adam hyperparameters (mostly starting_lr and lr_decay).
+    starting_lr=0.01,
+    lr_decay=0.0001,
+    momentum_weight=0.99,
+    ada_grad_weight=0.99,
+    epochs=200
 
 23/03/2025:
 - Watched almost all of this [video](https://www.youtube.com/watch?v=78vq6kgsTa8&t=663s&ab_channel=InstituteforPure%26AppliedMathematics%28IPAM%29)
 
 24/03/205:
-- Turns out that the nn doesn't always fits to ~80% on the 100 samples subset...
+- Turns out that the nn doesn't always fits to ~80% on the 100 samples subset, most of the times it doesn't...
 - Looking for ressources that explain **why** a network is not fitting.
   Find this [PDF](https://misraturp.gumroad.com/l/fdl), looks interesting.
-- Going to try 
+- Going to try gradient clipping to see if it improves the training
+- Looked at plotly FigureWidgets to stream the training data to the figure. I will defenetly be using that instead of rich.progress.track + base plotly Figure/
+- Reached 97% with the same hyper params as the 22/03/2025, interestingly enough, the abs gradient mean (almost) never went above 2. 
