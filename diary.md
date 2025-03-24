@@ -76,3 +76,12 @@
 - Started watching this [video](https://www.youtube.com/watch?v=7Q2JhZxNPow&ab_channel=SimonsInstitute)
 - Getting ~60% on 100 samples cifar10 subset with the same nn and Adam
 - Reached  80% by tweaking the Adam hyperparameters (mostly starting_lr and lr_decay).
+
+23/03/2025:
+- Watched almost all of this [video](https://www.youtube.com/watch?v=78vq6kgsTa8&t=663s&ab_channel=InstituteforPure%26AppliedMathematics%28IPAM%29)
+
+24/03/205:
+- Turns out that the nn doesn't always fits to ~80% on the 100 samples subset...
+- Looking for ressources that explain **why** a network is not fitting.
+  Find this [PDF](https://misraturp.gumroad.com/l/fdl), looks interesting.
+- Going to try 
