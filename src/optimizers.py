@@ -1,3 +1,4 @@
+from itertools import accumulate
 from functools import reduce, cache
 from IPython.display import display
 from dataclasses import dataclass, field
@@ -10,8 +11,8 @@ from numpy import ndarray, array_split as ndarray, split
 
 from losses import Loss
 from layers import Layer
-from metrics import accuracy
-from constants import EPSILON
+from metrics import metric_func
+from constants import EPSILON, DFLT_METRICS
 
 
 @dataclass
@@ -28,7 +29,7 @@ class Adam:
     epoch: int = field(default=0, init=False)
     iteration: int = field(default=0, init=False)
 
-    def optimize_nn(self, epochs, batch_size, metric_freq=1, metrics=[accuracy], plt_x=None, plt_ys=None, **plt_kwargs) -> DF:
+    def optimize_nn(self, epochs, batch_size, metric_freq=1, metrics:list[metric_func]=DFLT_METRICS, plt_x=None, plt_ys=None, **plt_kwargs) -> DF:
         """Optimizes the neural network and returns a dataframe of the training metrics."""
         try:
             nb_batches = int(np.ceil(len(self.x) / batch_size))
@@ -50,18 +51,28 @@ class Adam:
                 self.epoch += 1
         except KeyboardInterrupt:
             print("Caught KeyboardInterrupt exception, returning training metrics.")
-        finally:
-            return DF.from_records(self.training_metrics)
+        return DF.from_records(self.training_metrics)
 
     def record_metrics(self, metric_funcs:list[callable]) -> dict[str, any]:
-        y_pred = self.forward(self.x)
-        self.training_metrics.append({
-            "iteration": self.iteration,
-            "epoch": self.epoch,
-            "loss": self.loss.forward(y_pred, self.y),
-            "learning_rate": self.learning_rate,
-            **{func.__name__: func(nn=self.nn, y_pred=y_pred, y_true=self.y, loss=self.loss) for func in metric_funcs}
-        })
+        activations = self.forward(self.x)
+        y_pred = activations[-1]
+        gradients = list(accumulate(
+            reversed(self.nn), 
+            lambda g, l: l.backward(g)["inputs"],
+            initial=self.loss.backward(y_pred, self.y)
+        ))
+        metric_kwargs = dict(nn=self.nn, activations=activations, y_pred=y_pred, y_true=self.y, loss=self.loss, gradients=gradients)
+        new_metric_line = reduce(
+            lambda metric_line, metric_func: metric_func(metric_line, **metric_kwargs),
+            metric_funcs,
+            {
+                "iteration": self.iteration,
+                "epoch": self.epoch,
+                "loss": self.loss.forward(y_pred, self.y),
+                "learning_rate": self.learning_rate,
+            }
+        )
+        self.training_metrics.append(new_metric_line)
 
     def create_figure_widget(self, plt_x:str, plt_ys:list[str], **plt_kwargs) -> FigureWidget:
         df = DF.from_records(self.training_metrics).melt(plt_x, plt_ys)
@@ -78,7 +89,8 @@ class Adam:
                 fig.data[i].y = df[plt_y]
 
     def step(self, batch_x:ndarray, batch_y:ndarray):
-        batch_y_preds = self.forward(batch_x)
+        batch_activations = self.forward(batch_x)
+        batch_y_preds = batch_activations[-1]
         batch_gradients = self.loss.backward(batch_y_preds, batch_y)
         reduce(self.update_layer_params, reversed(self.nn), batch_gradients)
         self.iteration += 1
@@ -109,8 +121,9 @@ class Adam:
         return self.starting_lr / (1 + self.lr_decay * self.iteration)
 
     # Forward is implemented in SGD because it's the only place it's used, eventually it will be in a NueralNetwork module.
-    def forward(self, inputs:ndarray) -> ndarray:
-        return reduce(lambda x, l: l.forward(x), self.nn, inputs)
+    def forward(self, inputs:ndarray) -> list[ndarray]:
+        return list(accumulate(self.nn, lambda x, l: l.forward(x), initial=inputs))
+        # return reduce(lambda x, l: l.forward(x), self.nn, inputs)
 
 def lerp(a:ndarray, b:ndarray, t:float) -> ndarray:
     return a * t + (1 - t) * b
