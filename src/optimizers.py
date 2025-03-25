@@ -1,109 +1,108 @@
+from itertools import accumulate
 from functools import reduce, cache
+from IPython.display import display
+from dataclasses import dataclass, field
 
 import numpy as np
-from numpy import ndarray
-from rich.progress import track
 from pandas import DataFrame as DF
+from plotly.express import scatter
+from plotly.graph_objects import FigureWidget
+from numpy import ndarray, array_split as ndarray, split
 
 from losses import Loss
 from layers import Layer
-from metrics import accuracy
-from constants import EPSILON
+from metrics import metric_func
+from constants import EPSILON, DFLT_METRICS
 
 
-class SGD:
-    def __init__(self, learning_rate:float):
-        self._learning_rate = learning_rate
-        self.iterations = 0
-        self.training_metrics:list[dict] = []
+@dataclass
+class Adam:
+    nn:list[Layer]
+    x:ndarray
+    y:ndarray
+    loss:Loss
+    starting_lr:float
+    lr_decay:float
+    momentum_weight:float
+    ada_grad_weight:float
+    training_metrics:list[dict] = field(default_factory=list, init=False)
+    epoch: int = field(default=0, init=False)
+    iteration: int = field(default=0, init=False)
 
-    # Only works for categorical datasets for now
-    def optimize_nn(self, nn:list[Layer], x:ndarray, y:ndarray, epochs:int, batch_size:int, loss:Loss, metric_freq:int=1, use_track=True) -> DF:
+    def optimize_nn(self, epochs, batch_size, metric_freq=1, metrics:list[metric_func]=DFLT_METRICS, plt_x=None, plt_ys=None, **plt_kwargs) -> DF:
         """Optimizes the neural network and returns a dataframe of the training metrics."""
-        it = track(range(epochs), description="Training...") if use_track else range(epochs)
-        for epoch in it:
-            # Compute and store new trainging metrics
-            if not epoch % metric_freq:
-                y_pred = SGD.forward(nn, x)
-                self.training_metrics.append({
-                    "iteration": self.iterations,
-                    "epoch": epoch,
-                    "loss": loss.forward(y_pred, y),
-                    "learning_rate": self.learning_rate,
-                    "accuracy": accuracy(y_pred, y),
-                })
-            # Perform steps
-            for batch_i in range(0, x.shape[0], batch_size):
-                batch_x = x[batch_i:batch_i+batch_size]
-                batch_y = y[batch_i:batch_i+batch_size]
-                batch_y_preds = SGD.forward(nn, batch_x)
-                batch_gradients = loss.backward(batch_y_preds, batch_y)
-                self.update_params(batch_gradients, nn)
-                self.iterations += 1
+        try:
+            nb_batches = int(np.ceil(len(self.x) / batch_size))
+            fig = None
+            # Use self.epoch instead of epoch.
+            # This avoids resetting new metrics DF lines to the same epoch value in case this method gets recalled.
+            for _ in range(epochs):
+                if self.epoch % metric_freq == 0:
+                    self.record_metrics(metrics)
+                    if not plt_x is None:
+                        fig = self.create_figure_widget(plt_x, plt_ys, **plt_kwargs) if fig is None else fig
+                        self.update_figure(fig, plt_x, plt_ys)
+                # Shuffle x and y
+                permutation = np.random.permutation(len(self.x))
+                self.x = self.x[permutation]
+                self.y = self.y[permutation]
+                for batch_x, batch_y in zip(split(self.x, nb_batches), split(self.y, nb_batches)):
+                    self.step(batch_x, batch_y)
+                self.epoch += 1
+        except KeyboardInterrupt:
+            print("Caught KeyboardInterrupt exception, returning training metrics.")
         return DF.from_records(self.training_metrics)
 
-    # Forward is implemented in SGD because it's the only place it's used, eventually it will be in a NueralNetwork module.
-    @classmethod
-    def forward(cls, nn:list[Layer], inputs:ndarray) -> ndarray:
-        return reduce(lambda x, l: l.forward(x), nn, inputs)
+    def record_metrics(self, metric_funcs:list[callable]) -> dict[str, any]:
+        activations = self.forward(self.x)
+        y_pred = activations[-1]
+        gradients = list(accumulate(
+            reversed(self.nn), 
+            lambda g, l: l.backward(g)["inputs"],
+            initial=self.loss.backward(y_pred, self.y)
+        ))
+        metric_kwargs = dict(nn=self.nn, activations=activations, y_pred=y_pred, y_true=self.y, loss=self.loss, gradients=gradients)
+        new_metric_line = reduce(
+            lambda metric_line, metric_func: metric_func(metric_line, **metric_kwargs),
+            metric_funcs,
+            {
+                "iteration": self.iteration,
+                "epoch": self.epoch,
+                "loss": self.loss.forward(y_pred, self.y),
+                "learning_rate": self.learning_rate,
+            }
+        )
+        self.training_metrics.append(new_metric_line)
 
-    def update_params(self, outputs_gradients:ndarray, nn:list[Layer]):
-        for layer in reversed(nn):
-            gradients:dict = layer.backward(outputs_gradients)
-            inputs_grad = gradients.pop("inputs")
-            for param_name, grads_wrt_param in gradients.items():
-                param:ndarray = getattr(layer, param_name)
-                gradient_wrt_param = self.postprocess_gradient(layer, param_name, grads_wrt_param)
-                setattr(layer, param_name, param - gradient_wrt_param)
-            outputs_gradients = inputs_grad
+    def create_figure_widget(self, plt_x:str, plt_ys:list[str], **plt_kwargs) -> FigureWidget:
+        df = DF.from_records(self.training_metrics).melt(plt_x, plt_ys)
+        fig = scatter(df, plt_x, "value", facet_row="variable", color="variable", **plt_kwargs).update_yaxes(matches=None)
+        fig = FigureWidget(fig)
+        display(fig)
+        return fig
 
-    def postprocess_gradient(self, layer:Layer, param_name:str, gradient_wrt_param:ndarray) -> ndarray:
-        return self.learning_rate * gradient_wrt_param
+    def update_figure(self, fig:FigureWidget, plt_x:str, plt_ys:list[str]):
+        df = DF.from_records(self.training_metrics)
+        with fig.batch_update():
+            for i, plt_y in enumerate(plt_ys):
+                fig.data[i].x = df[plt_x]
+                fig.data[i].y = df[plt_y]
 
-    @property
-    def learning_rate(self) -> float:
-        return self._learning_rate
+    def step(self, batch_x:ndarray, batch_y:ndarray):
+        batch_activations = self.forward(batch_x)
+        batch_y_preds = batch_activations[-1]
+        batch_gradients = self.loss.backward(batch_y_preds, batch_y)
+        reduce(self.update_layer_params, reversed(self.nn), batch_gradients)
+        self.iteration += 1
 
-class SGD_with_decay(SGD):
-    def __init__(self, starting_lr:float, lr_decay:float=0.0):
-        self.starting_lr = starting_lr
-        self.lr_decay = lr_decay
-        super().__init__(starting_lr)
-
-    @property
-    def learning_rate(self) -> float:
-        return self.starting_lr / (1 + self.lr_decay * self.iterations)
-
-class SGD_with_momentum(SGD_with_decay):
-    def __init__(self, starting_lr:float, lr_decay:float, momentum:float):
-        self.momentum = momentum
-        super().__init__(starting_lr, lr_decay)
-
-    def postprocess_gradient(self, layer:Layer, param_name:str, gradient_wrt_param:ndarray) -> ndarray:
-        param_momentum = getattr(layer, param_name + "_momentum", cached_zeros(gradient_wrt_param.shape))
-        post_processed_gradient_wrt_param = self.learning_rate * gradient_wrt_param + param_momentum * self.momentum
-        setattr(layer, param_name + "_momentum", post_processed_gradient_wrt_param)
-        return post_processed_gradient_wrt_param
-
-class RMSprop(SGD_with_decay):
-    def __init__(self, starting_lr:float, lr_decay:float, rho:float):
-        self.rho = rho
-        super().__init__(starting_lr, lr_decay)
-
-    def get_and_set_adapted_grad(self, layer:Layer, param_name:str, gradient_wrt_param:ndarray) -> ndarray:
-        param_cache = getattr(layer, param_name + "_cache", cached_zeros(gradient_wrt_param.shape))
-        param_cache = self.rho * param_cache + (1 - self.rho) * gradient_wrt_param ** 2
-        setattr(layer, param_name + "_cache", param_cache)
-        return gradient_wrt_param / (np.sqrt(param_cache) + EPSILON)
-
-    def postprocess_gradient(self, layer:Layer, param_name:str, param:ndarray, gradient_wrt_param:ndarray) -> ndarray:
-        return self.learning_rate * self.get_and_set_adapted_grad(layer, param_name, param, gradient_wrt_param)
-
-class Adam(SGD_with_decay):
-    def __init__(self, starting_lr:float, lr_decay:float, momentum_weight:float, ada_grad_weight:float):
-        self.momentum_weight = momentum_weight
-        self.ada_grad_weight = ada_grad_weight
-        super().__init__(starting_lr, lr_decay)
+    def update_layer_params(self, outputs_gradients:ndarray, layer:Layer) -> ndarray:
+        grads_wrt:dict = layer.backward(outputs_gradients)
+        grads_wrt_inputs = grads_wrt.pop("inputs")
+        for param_name, grad_wrt_param in grads_wrt.items():
+            param:ndarray = getattr(layer, param_name)
+            grad_wrt_param = self.postprocess_gradient(layer, param_name, grad_wrt_param)
+            setattr(layer, param_name, param - grad_wrt_param)
+        return grads_wrt_inputs
 
     def postprocess_gradient(self, layer:Layer, param_name:str, gradient_wrt_param:ndarray) -> ndarray:
         momentum = self.update_moving_average(layer, param_name + "_momentum", gradient_wrt_param, self.momentum_weight)
@@ -115,7 +114,16 @@ class Adam(SGD_with_decay):
         moving_average = getattr(layer, moving_average_name, cached_zeros(gradient.shape)) # Get the moving averate
         moving_average = lerp(moving_average, gradient, beta) # Move the average
         setattr(layer, moving_average_name, moving_average) # Set the moved average for future use
-        return moving_average / (1 - beta ** (self.iterations + 1)) # Correct and return the average 
+        return moving_average / (1 - beta ** (self.iteration + 1)) # Correct and return the average 
+
+    @property
+    def learning_rate(self) -> float: 
+        return self.starting_lr / (1 + self.lr_decay * self.iteration)
+
+    # Forward is implemented in SGD because it's the only place it's used, eventually it will be in a NueralNetwork module.
+    def forward(self, inputs:ndarray) -> list[ndarray]:
+        return list(accumulate(self.nn, lambda x, l: l.forward(x), initial=inputs))
+        # return reduce(lambda x, l: l.forward(x), self.nn, inputs)
 
 def lerp(a:ndarray, b:ndarray, t:float) -> ndarray:
     return a * t + (1 - t) * b
