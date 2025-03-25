@@ -11,7 +11,7 @@ from numpy import ndarray, array_split as ndarray, split
 from losses import Loss
 from layers import Layer
 from metrics import accuracy
-from constants import EPSILON, DFLT_X_PLT, DFLT_Y_PLT
+from constants import EPSILON
 
 
 @dataclass
