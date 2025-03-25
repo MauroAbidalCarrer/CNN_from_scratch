@@ -13,7 +13,7 @@ class Layer(ABC):
         pass
 
     @abstractmethod
-    def backward(self, gradients:ndarray) -> ndarray|dict[str, ndarray]:
+    def backward(self, gradients:ndarray) -> dict[str, ndarray]:
         """Returns a dict of the gradients wrt params and inputs."""
         pass
 
