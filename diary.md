@@ -112,3 +112,9 @@
   Maybe I should try to permutate the samples at each epoch to further randomize and the batch gradients(and maybe decrease momentum?)
   I also notted that the underfitting CNNs losses plateau at the same value(~3.27) which, I assume, is related to the distribution of labels in the 100 (first) samples.
   I will try to sample an equal amount of labels and see if I can more relaiably get a fitted model.
+
+  26/03/2025:
+  - Made even x_train/y_train of 100 samples cifar10 subset doesn't seem to improve anything...
+  - Implemented `nn_params_stats` and `activations_stats` metric functions to get their mean, std, l1 and l2.
+  - I think the best way to understand why some models are underfitting and some others fitting, would be to get ~5 training stats (including activations, gradients AND params).
+    And then try to find some meaningfull property that explains why some are fitting and some not. 
