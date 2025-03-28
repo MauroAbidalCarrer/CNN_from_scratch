@@ -113,8 +113,74 @@
   I also notted that the underfitting CNNs losses plateau at the same value(~3.27) which, I assume, is related to the distribution of labels in the 100 (first) samples.
   I will try to sample an equal amount of labels and see if I can more relaiably get a fitted model.
 
-  26/03/2025:
+26/03/2025:
   - Made even x_train/y_train of 100 samples cifar10 subset doesn't seem to improve anything...
   - Implemented `nn_params_stats` and `activations_stats` metric functions to get their mean, std, l1 and l2.
   - I think the best way to understand why some models are underfitting and some others fitting, would be to get ~5 training stats (including activations, gradients AND params).
     And then try to find some meaningfull property that explains why some are fitting and some not. 
+  - I will first implement a way to read/write a network to a json
+
+27/03/2025:
+  - Actually I first wrote a while loop that breaks once a fitting model has been found.
+    The first time I ran it it got a 50% accuracy model but I messed up a line and the best model didn't get saved...
+  - I re ran the loop a few times, trained abut 100 or so models, and obviou-fuckingly now no model is fitting (-_-).
+  - Maybe I should do the study with models trained on the 10 smaples cifra10 subset instead of the 100 samples cifra10 subset as I get way more fitted models.
+    Or speed up the training, if I could find a 10x improvement it would be enough to reliably find a fitting model in ~10mins... I think.
+  - I looked at the AlexNet architecutre and it reminded that the number of kernels should increase as the are further in the model.
+    My current architecture is:
+    ```python
+    [
+        Convolutional((10, 5, 5, 3)),
+        Relu(),
+        MaxPool((2, 2)),
+        Convolutional((10, 3, 3, 10)),
+        Relu(),
+        MaxPool((2, 2)),
+        Flatten(),
+        Linear(360, 64),
+        Relu(),
+        Linear(64, y.shape[1]),
+        Softmax(),
+    ]
+    ```
+    There are as many kernels as there are classes in the second conv layer wich might be problematic actually...
+    I changed it to:
+    ```python
+    [
+        Convolutional((20, 5, 5, 3)),
+        Relu(),
+        MaxPool((2, 2)),
+        Convolutional((32, 3, 3, 20)),
+        Relu(),
+        MaxPool((2, 2)),
+        Flatten(),
+        Linear(1152, 64),
+        Relu(),
+        Linear(64, y.shape[1]),
+        Softmax(),
+    ]
+    ```
+    Let's see if that fixes it, it certainly takes forwever to train a model for 100 epochs...  
+    6 minutes in and only 3 models trained, best accuracy is 12% -_-.  
+    22 minutes in and the best accuracy is 14%...  
+    While it is annoying that I can't find a fitting model anymore, the while loop is at least an effective way to test an idea.  
+    After an hour and ~18 more trained models no improvements so I will switch back to the previous architecture.  
+  - Let's try the btach norm layer.   
+    Though, looking at the AlexNet architecture again,    
+    I made chatGPT implement it, I was suprised to see that the mvg average/std, gamma and beta ar of shape [1, 1, 1, channels] and not [1, width, height, channels].   
+    ChatGPT says that it's to preserve the signal that lies inbetween the values(he didn't phrase it that nicely, I did).   
+    I guess that makes sense to me but following that logic it would also mean that there is a singal that lies in between the channels right?    
+    Anyways, the results are unanimous, BatchNorm is amazing. Almost all the models fit.    
+    Damn, I literally almost implemented it 10 days ago...   
+  - I'm too tired to keep coding (or too lazzy idk...) so I watched this ["why batchnorm works" deeplearning.ai video](https://www.youtube.com/watch?v=nUUqwaxLnWs&ab_channel=DeepLearningAI).  
+    Reminded me that I should look into deeplearning.ai.  
+    It was great, made me understand why it has a small regularizatin but it didn't explain its effect on gradients.
+
+28/03/2025:
+  - I started implementing BatchNorm by myself because I didn't really like the xhatGPT implementation, even though it works jsut fine.  
+    I wanted to implement the normalization as `(inputs - mean) / (std - epsilon)` instead of `(inputs - mean) / sqrt(variance + epsilon)`.  
+    The latter was in the original paper of the batchnorm layer so I thought that there was probably a reason for the presence of the sqrt.
+    I asked chatGPT if these were equivalent and it turns out that it isn't.  
+    The latter is better because its output for small variance inputs is properly mean centred (the mean value is the same but numerical instability causes very small numbers to not get mean centerd output).  
+    And the outputs variance is also closer to one for the second method.  
+    I'm not really sure it would impact that much the training but let's not take the risk just to remove one sqrt call, shall we?  
