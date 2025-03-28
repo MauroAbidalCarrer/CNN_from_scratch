@@ -34,14 +34,14 @@ class Adam:
         """Optimizes the neural network and returns a dataframe of the training metrics."""
         if catch_interrupt:
             try:
-                self.optimize_nn(epochs, batch_size, metric_freq, metrics, plt_x, plt_ys, **plt_kwargs)
+                self._optimize_nn(epochs, batch_size, metric_freq, metrics, plt_x, plt_ys, **plt_kwargs)
             except KeyboardInterrupt:
                 print("Caught KeyboardInterrupt exception, returning training metrics.")
         else:
-            self.optimize_nn(epochs, batch_size, metric_freq, metrics, plt_x, plt_ys, **plt_kwargs)
+            self._optimize_nn(epochs, batch_size, metric_freq, metrics, plt_x, plt_ys, **plt_kwargs)
         return DF.from_records(self.training_metrics)
 
-    def optimize_nn(self, epochs, batch_size, metric_freq=1, metrics:list[metric_func]=[accuracy], plt_x=None, plt_ys=None, **plt_kwargs) -> DF:
+    def _optimize_nn(self, epochs, batch_size, metric_freq=1, metrics:list[metric_func]=[accuracy], plt_x=None, plt_ys=None, **plt_kwargs) -> DF:
         nb_batches = int(np.ceil(len(self.x) / batch_size))
         fig = None
         # Use self.epoch instead of epoch.
