@@ -184,3 +184,4 @@
     The latter is better because its output for small variance inputs is properly mean centred (the mean value is the same but numerical instability causes very small numbers to not get mean centerd output).  
     And the outputs variance is also closer to one for the second method.  
     I'm not really sure it would impact that much the training but let's not take the risk just to remove one sqrt call, shall we?  
+  - Updated the repo with all the modifications and rewrote BatchNorm to my liking, I will try to perform batchnorm over other axis combinations than "just" (0, 1, 2) and apply it on the fc layers (and input layer?).  
