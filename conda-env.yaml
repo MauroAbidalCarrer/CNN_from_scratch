@@ -1,6 +1,7 @@
 name: CNN
 channels:
   - defaults
+  - conda-forge
 dependencies:
   - python=3.12
   - kagglehub==0.3.6
