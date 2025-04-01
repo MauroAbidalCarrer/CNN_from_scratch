@@ -30,7 +30,7 @@ class Adam:
     epoch: int = field(default=0, init=False)
     iteration: int = field(default=0, init=False)
 
-    def optimize_nn(self, epochs, batch_size, metric_freq=1, metrics:list[metric_func]=[accuracy], catch_interrupt=False, plt_x=None, plt_ys=None, **plt_kwargs) -> DF:
+    def optimize_nn(self, epochs, batch_size, metric_freq=1, metrics:list[metric_func]=[accuracy], catch_interrupt=True, plt_x=None, plt_ys=None, **plt_kwargs) -> DF:
         """Optimizes the neural network and returns a dataframe of the training metrics."""
         if catch_interrupt:
             try:
