@@ -1,3 +1,0 @@
-- Implement Test accuracy/loss.
-- Implemente support for delegated visualization: Implement visualization in separate module.
-- Implement test accuracy/loss visualization.
