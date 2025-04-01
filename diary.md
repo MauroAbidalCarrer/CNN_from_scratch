@@ -204,3 +204,8 @@
     It's not a real improvement but at least it should help me find a solution faster as it will take me less time to check if a solution works.  
   - I added back the second conv layer and it seems to work a lot better, reaching 72% accuracy at epoch 50.
   - I increased the number of filters in the second conv layer from 10 to 32 but it didn't seem to really increase the perfs. 
+  - Reached 85% accuracy after 100 epochs... and 30ins.
+  - I will try to decrease tthe number of filters in the second conv layer to 20 and increase the size of the filters of the first from 5x5 to 7x7.
+  - Even with this fairly high accuracy on this training data subset, I only get 33% accuracy on the test data.
+    That is the same score as the nn trained on the 1k samples subset.
+    That being said the x_test is 10k samples so it's not that suprising.
