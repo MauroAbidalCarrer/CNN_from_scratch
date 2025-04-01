@@ -190,9 +190,17 @@
   - The network works fits properly on 1000 samples cifar10 subset, though it takes forever to train (~10 mins).
   - Trying on 5k samples, it fits up to ~50% accuracy and then the accuracy (and loss) plateaus.
   - I might need to switch implementation because to speed things up, it's a shame there isn't a simple numpy on GPU alternative, I looked into numba and it seems to have a lot of caveats...
+  - Looking at the cifar10 from scratch kaggle notebook I (re)saw that the model had only one (bigger, 32x7x7x3 wher I have 10x5x5x3) conv layer.  
+    And a hidden FC layer of output size 300.
+    I.e a shorter wider network.
+    I tried to mimicking this by removing the second conv layer and set the ouput size of the hidden FC layer to 128.
+    It works!
+    I notted that the output size of the first FC hidden layer (64) often turned out to be a bottleneck.
 
 31/03/2025:
   - Maybe I should switch from `tensordot` to `scipy.signal.convolve` which under the hood can use `fft`.
   - The kaggle cifar10 with numpy kaggle notebook uses a beta_1 of 0.8 (which corresponds to the `momentum_weight` in my Adam optimazation).
     I tried the same value for my training and it did speed things up: the model plateaus to 50% earlier.  
     It's not a real improvement but at least it should help me find a solution faster as it will take me less time to check if a solution works.  
+  - I added back the second conv layer and it seems to work a lot better, reaching 72% accuracy at epoch 50.
+  - I increased the number of filters in the second conv layer from 10 to 32 but it didn't seem to really increase the perfs. 
