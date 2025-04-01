@@ -185,3 +185,14 @@
     And the outputs variance is also closer to one for the second method.  
     I'm not really sure it would impact that much the training but let's not take the risk just to remove one sqrt call, shall we?  
   - Updated the repo with all the modifications and rewrote BatchNorm to my liking, I will try to perform batchnorm over other axis combinations than "just" (0, 1, 2) and apply it on the fc layers (and input layer?).  
+
+29/03/2025:
+  - The network works fits properly on 1000 samples cifar10 subset, though it takes forever to train (~10 mins).
+  - Trying on 5k samples, it fits up to ~50% accuracy and then the accuracy (and loss) plateaus.
+  - I might need to switch implementation because to speed things up, it's a shame there isn't a simple numpy on GPU alternative, I looked into numba and it seems to have a lot of caveats...
+
+31/03/2025:
+  - Maybe I should switch from `tensordot` to `scipy.signal.convolve` which under the hood can use `fft`.
+  - The kaggle cifar10 with numpy kaggle notebook uses a beta_1 of 0.8 (which corresponds to the `momentum_weight` in my Adam optimazation).
+    I tried the same value for my training and it did speed things up: the model plateaus to 50% earlier.  
+    It's not a real improvement but at least it should help me find a solution faster as it will take me less time to check if a solution works.  
