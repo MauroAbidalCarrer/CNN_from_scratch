@@ -209,3 +209,17 @@
   - Even with this fairly high accuracy on this training data subset, I only get 33% accuracy on the test data.
     That is the same score as the nn trained on the 1k samples subset.
     That being said the x_test is 10k samples so it's not that suprising.
+
+01/04/2025:
+  - Looked into a implementation of [cnn on cifar10 with cuda](https://www.kaggle.com/code/alincijov/cifar-10-numba-cpu-cnn-from-scratch) but it didn't seem any faster.
+    > Note: I had to fix this line `for i in range(len(df1)):` into `for i in range(len(df1[0])):` (and turn the internet of the notebook on but this is not a fix).  
+    So maybe I shouldn't work with numba?
+    I found another [cnn with cuda](https://github.com/WHDY/mnist_cnn_numba_cuda/tree/master) let's look into that.  
+    The (numpy) kaggle notebook used only 10 epochs so I should be able to get away with numpy and my desktop.   
+    Maybe I should look into the weight initialization and try to replicate all the settings to see there is an improvement I can find and a lesson to learn from it.  
+    Actually it has the same weight initialization as me...
+    Let's try to set the hidden fc output size to 300.
+
+02/04/2025:
+- Actually, now that I think about it the full dataset is 50k i.e 10x the size of my 5k subset so it's not shocking that the numpy kaggle notebook needs 10x less epochs.
+  I'm going to look into CuPy, it also seems interesting
