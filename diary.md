@@ -342,3 +342,5 @@
     It works!  
     80% accuracy at epoch 28 in ~22mins!  
     Weirdly enough, doubling the dataset size sped up the training...  
+    Test accuracy raised to 40% test accuracy. 
+  - 
