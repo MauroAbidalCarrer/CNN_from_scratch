@@ -213,6 +213,7 @@
 01/04/2025:
   - Looked into a implementation of [cnn on cifar10 with cuda](https://www.kaggle.com/code/alincijov/cifar-10-numba-cpu-cnn-from-scratch) but it didn't seem any faster.
     > Note: I had to fix this line `for i in range(len(df1)):` into `for i in range(len(df1[0])):` (and turn the internet of the notebook on but this is not a fix).  
+
     So maybe I shouldn't work with numba?
     I found another [cnn with cuda](https://github.com/WHDY/mnist_cnn_numba_cuda/tree/master) let's look into that.  
     The (numpy) kaggle notebook used only 10 epochs so I should be able to get away with numpy and my desktop.   
@@ -222,4 +223,103 @@
 
 02/04/2025:
 - Actually, now that I think about it the full dataset is 50k i.e 10x the size of my 5k subset so it's not shocking that the numpy kaggle notebook needs 10x less epochs.
-  I'm going to look into CuPy, it also seems interesting
+  - I'm going to look into CuPy, it also seems interesting
+  - I tried a bunch of chatGPT written numba versions of my valid correlate but none of them were faster(sad)...
+  - I tested the numpy cnn kaggle notebook and it is super slow.  
+  - So back on the cupy option I would need to setup a remote session... let's try on kaggle.  
+    Looking at this [cupy CNN repo](https://github.com/AlaaAnani/CNN-from-Scratch-Cupy), I stumble upon the lealkyReLu, I wander if this could speed up my training.  
+    Letme ask daddyGPT and uncle Google.  
+    Seems like no.... but I might try it anyway later.  
+  - Saw that cupy does not provide `sliding_window_view`, but it does provide `as_strided` which I believe can be used for the same goal.   
+    In fact, looking at the source of `sliding_window_view` we can see that it is built on top of `as_strided`:thumbsup:.  
+  - As expected, setting up the kaggle notebook is an absolute pain in the ass...  
+    Gonna try lightning AI.  
+    Tried it, setup was pretty straight forward which is really cool.    
+    However, when I tried this chatGPT written code snippet:  
+    ```python
+    import numpy as np
+    import cupy as cp
+    import time
+
+    # Generate random inputs
+    views_np = np.random.rand(10000, 26, 26, 3, 7, 7)
+    k_np = np.random.rand(32, 7, 7, 3)
+
+    # NumPy tensordot benchmark
+    start = time.time()
+    np_result = np.tensordot(views_np, k_np, axes=([3, 4, 5], [3, 1, 2]))
+    np_time = time.time() - start
+    print(f"NumPy tensordot Time: {np_time:.4f}s")
+
+    # Transfer to GPU (CuPy)
+    views_cp = cp.asarray(views_np)
+    k_cp = cp.asarray(k_np)
+
+    # CuPy tensordot benchmark
+    start = time.time()
+    cp_result = cp.tensordot(views_cp, k_cp, axes=([3, 4, 5], [3, 1, 2]))
+    cp_time = time.time() - start
+    print(f"CuPy tensordot Time: {cp_time:.4f}s")
+
+    # Transfer back to CPU for comparison
+    cp_result_np = cp.asnumpy(cp_result)
+
+    # Validate correctness
+    assert np.allclose(np_result, cp_result_np, atol=1e-5)
+    print("Results match!")
+    ```
+    The time for numpy and cupy were equal (1.3s).  
+    That suprised me in two ways:
+    1.  Why isn't cupy faster?!!!!!
+    1.  1.3s seems pretty fast for numpy letme compare this to my computer.  
+    Ran it on my computer and it's infact a lot slower: 5s.  
+    So even if I don't use the lightning GPU I would still get a 5x speed increase without any overhead caused by switching to cupy.   
+    That sounds really good.  
+    Started to run the cifar10 notebook on the remote ligthning computer but it seems to run at the same speed with 14 epochs in 7 mins same as my computer...  
+    At 14 mins, my computer actually outran the lightning AI computer: 32 epopchs vs 28 respectively.  
+  - Turns out that cupy also has a warmup, let me test it a second time.
+    Updated the code:
+  ```python
+  import numpy as np
+  import cupy as cp
+  import time
+
+  # Define the input shapes
+  views_shape = (10000, 26, 26, 3, 7, 7)
+  k_shape = (32, 7, 7, 3)
+
+  # Generate random input data
+  views_np = np.random.rand(*views_shape)
+  k_np = np.random.rand(*k_shape)
+
+  # Convert to CuPy arrays
+  views_cp = cp.array(views_np)
+  k_cp = cp.array(k_np)
+
+  # Warm-up CuPy
+  _ = cp.tensordot(views_cp, k_cp, axes=([3, 4, 5], [3, 1, 2]))
+  cp.cuda.Stream.null.synchronize()
+
+  # Measure NumPy time
+  start = time.time()
+  tensordot_np = np.tensordot(views_np, k_np, axes=([3, 4, 5], [3, 1, 2]))
+  numpy_time = time.time() - start
+  print(f"NumPy tensordot Time: {numpy_time:.4f}s")
+
+  # Measure CuPy time with multiple iterations
+  iterations = 10
+  start = time.time()
+  for _ in range(iterations):
+      _ = cp.tensordot(views_cp, k_cp, axes=([3, 4, 5], [3, 1, 2]))
+  cp.cuda.Stream.null.synchronize()
+  cp_time = (time.time() - start) / iterations
+  print(f"Average CuPy tensordot Time: {cp_time:.4f}s")
+  ```
+  Ok, it's better:
+  - numpy: 1.3s
+  - cupy: 0.5s   
+  I was expecting a bigger improvement tbh, like a 10x...  
+  Let's see if uncleGPT can make it better.
+
+
+<!-- 03/04/2025 -->
