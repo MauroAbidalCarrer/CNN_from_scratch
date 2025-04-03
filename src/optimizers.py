@@ -12,7 +12,7 @@ from numpy import ndarray, array_split as ndarray, split
 
 from losses import Loss
 from layers import Layer
-from constants import EPSILON
+from constants import EPSILON, MAX_NB_SAMPLES
 from time_utils import time_to_exec
 from numpy_utils import cached_zeros
 from metrics import metric_func, accuracy
@@ -65,8 +65,11 @@ class Adam:
             self.epoch += 1
 
     def record_metrics(self, metric_funcs:list[callable]) -> dict[str, any]:
-        activations = self.forward(self.x)
-        y_pred = activations[-1]
+        y_preds = []
+        for subset_i in range(0, self.x.shape[0], MAX_NB_SAMPLES):
+            activations = self.forward(self.x[subset_i:subset_i+MAX_NB_SAMPLES])
+            y_preds.append(activations[-1])
+        y_pred = np.concatenate(y_preds)
         metric_kwargs = dict(nn=self.nn, activations=activations, y_pred=y_pred, y_true=self.y, loss=self.loss)
         new_metric_line = reduce(
             lambda metric_line, metric_func: metric_func(metric_line, **metric_kwargs),
