@@ -343,4 +343,17 @@
     80% accuracy at epoch 28 in ~22mins!  
     Weirdly enough, doubling the dataset size sped up the training...  
     Test accuracy raised to 40% test accuracy. 
-  - 
+  - Let's try the full dataset then (I might need to increase the swap)...
+    I encountered this error: `MemoryError: Unable to allocate 37.0 GiB for an array with shape (50000, 26, 26, 3, 7, 7) and data type float64`.  
+    Given the shape of the ndarray, I assum this is the ndarray of the views.  
+    What's weird is that the sliding_window_view should only create a view of the input tensor.  
+    Ok, looking at the traceback, I see that this is because the tensordot function uses a transpose on the views before performing the dot call.  
+    This effectively requires copy (and therefore an allocation) of the views to be made.  
+    Since this problem arises only for metric recording of the full dataset loss/accuracy I will simply split the forward call on the entire dataset in calls of 10k subsets of the dataset and then concat them.  
+    That seems to have fixed it.
+  - Three epochs and 4 mins in and we are already at 50% accuracy (on training set) I'm actually mind blown.  
+    I wander if einsum would not be faster... if it doesn't use transpose, it would not need to do all those allocations... to be continued.  
+  - While the training continues I will get a beer...
+  - OOOOOOOOOOOOOOOOOOO it fitted the full training dataset at 89% accuracy!!!!!!
+  - Test accuracy is 50% but I think this is only because I left the training going on for too many epochs.
+    I'll find out tomorrow
