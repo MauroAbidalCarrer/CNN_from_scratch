@@ -322,4 +322,23 @@
   Let's see if uncleGPT can make it better.
 
 
-<!-- 03/04/2025 -->
+03/04/2025:
+  - Switching the batch size from 200 to 500 (tried to see if it would speed things up), made the model untrainable.  
+    This modification was not pushed to the remote repo, maybe it did speed things up and that's why the remote lightning AI computer took more time to perform the epochs?  
+    I'm running the training again with 200 batch size on my desktop let's see how that will change the speed.  
+    No, it's, suprisingly enough, faster to train with smaller batch size: 33 epochs in 13 mins this time on my desktop.  
+    Ok, I think I know why there was a speed diff, I also forgot the change to the architecture of the network.  
+    Let's rerun the notebook on the remote computer to see if there is any diff.  
+    At ~4 mins, it looks like it didin't change anything...  
+    No diffs indeed...
+  - Maybe I don't need to speed things up after all?
+    Let's say it takes me ~2 days to get the best off of cupy and get a ~10x improvement it would be nice.  
+    BUT, it might prevent someone who doesn't have a cuda GPU to run the notebook.  
+    AND maybe I can just run the training on the 50ks which should take ~10x more time (5 hours) to train that give me ~two trained models per night.  
+    That way I can focus on saving on the model.  
+    Then I would move on to pytorch, I feel like I would be wasting time if I kept on building on top of numpy.
+  - Let's try to scale up to 10k samples cifar10 subset, same architecture/hyperparameters.  
+    First run did not succeed, I changed the batch size to 500 (to try to speed things up) and decreased the starting leargnig rate from 0.025 to 0.015.  
+    It works!  
+    80% accuracy at epoch 28 in ~22mins!  
+    Weirdly enough, doubling the dataset size sped up the training...  
