@@ -352,8 +352,43 @@
     Since this problem arises only for metric recording of the full dataset loss/accuracy I will simply split the forward call on the entire dataset in calls of 10k subsets of the dataset and then concat them.  
     That seems to have fixed it.
   - Three epochs and 4 mins in and we are already at 50% accuracy (on training set) I'm actually mind blown.  
-    I wander if einsum would not be faster... if it doesn't use transpose, it would not need to do all those allocations... to be continued.  
+    I wander if einsum would be faster... if it doesn't use transpose, it would not need to do all those allocations... to be continued.  
   - While the training continues I will get a beer...
   - OOOOOOOOOOOOOOOOOOO it fitted the full training dataset at 89% accuracy!!!!!!
   - Test accuracy is 50% but I think this is only because I left the training going on for too many epochs.
     I'll find out tomorrow
+
+04/04/2025:
+  - Interrupting the training at epoch 28, we get a train/test accuracy of 70 and 60 percent respectively.    
+    This confirms that the model of yesterday did overfit.  
+  - Trying to switch back to einsum to see if it speeds things up (looks like it doesn't).
+    I tested them with `timeit` and tensordot is, in fact, faster.
+  - Looked at a lot of videos on GPUs to see which one could fit me best, the 5070 or some GPU of the 30 series seem like the best options.  
+  - I have also looked at cloud GPU options and runPod and Vast.ai seem pretty interesting.
+  - Looked at the kernels and they resemble the cpu kaggle's kernels which is a good sign.
+
+06/04/2025:
+  - Retrained a model for 30 epochs with 15 kernels and interestingly enough, only 5 kernels are used.  
+    By "not being used", I mean that the sum of the activation maps of a 1000 samples batch over the 0(sample), 1(width) and 2(height) axes are 0 after Relu.  
+    I believe this is known as a dead neuron, although here it's more like a dead kernel.  
+  - Note that I never(~5 trainings) experience this with 10 kernels models and always (with ~3 trainings) do with 15 kernels models.  
+    So maybe this is due to a missimplementatin (in the batchNorm maybe)?
+  - So let's try leakyRelu:manshrugging:.
+
+07/04/2025:
+  - LeakyRelu had a typo that made the gradient innacurate.
+    After fixing it and switching Relu by LeakyRelu after the conv/BatchNorm layers, I trained the 15 kernels models for 22 epochs.  
+    Got a training and test accuracy of 69 and 61 percent respectively.  
+    This time all the filters are used.  
+    I looked at the hidden Fc layer activations for 1000 imgs and the activations were also VERY sparse.  
+    I will try replacing the second ReLu with LeakyReLu too.  
+
+08/04/2025:
+  - I ran a 35 epochs training on the LeakyRelu model but there was no improvement...
+
+09/04/2025:
+  - Tried l2 norm but it didn't seem to work...
+
+10/04/2025:
+  - Trying to use the LeakyRelu only on the hidden fc layer.
+  - Saw in the kaggle notebook that the conv layer has a stride of 2 and a padding of 1, that something that might be worth looking into.  
