@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 from pandas import DataFrame as DF
-from plotly.express import scatter
+from plotly.express import line
 from plotly.graph_objects import FigureWidget
 from numpy import ndarray, array_split as ndarray, split
 
@@ -28,6 +28,7 @@ class Adam:
     lr_decay:float
     momentum_weight:float
     ada_grad_weight:float
+    l2_weight:float = field(default=0)
     training_metrics:list[dict] = field(default_factory=list, init=False)
     epoch: int = field(default=0, init=False)
     iteration: int = field(default=0, init=False)
@@ -86,7 +87,7 @@ class Adam:
 
     def create_figure_widget(self, plt_x:str, plt_ys:list[str], **plt_kwargs) -> FigureWidget:
         df = DF.from_records(self.training_metrics).melt(plt_x, plt_ys)
-        fig = scatter(df, plt_x, "value", facet_row="variable", color="variable", **plt_kwargs).update_yaxes(matches=None)
+        fig = line(df, plt_x, "value", facet_row="variable", color="variable", markers=True, **plt_kwargs).update_yaxes(matches=None)
         fig = FigureWidget(fig)
         display(fig)
         return fig
@@ -110,14 +111,15 @@ class Adam:
         grads_wrt_inputs = grads_wrt.pop("inputs")
         for param_name, grad_wrt_param in grads_wrt.items():
             param:ndarray = getattr(layer, param_name)
-            grad_wrt_param = self.postprocess_gradient(layer, param_name, grad_wrt_param)
+            grad_wrt_param = self.postprocess_gradient(layer, param_name, grad_wrt_param, param)
             setattr(layer, param_name, param - grad_wrt_param)
         return grads_wrt_inputs
 
-    def postprocess_gradient(self, layer:Layer, param_name:str, gradient_wrt_param:ndarray) -> ndarray:
+    def postprocess_gradient(self, layer:Layer, param_name:str, gradient_wrt_param:ndarray, param:ndarray) -> ndarray:
         momentum = self.update_moving_average(layer, param_name + "_momentum", gradient_wrt_param, self.momentum_weight)
-        cache = self.update_moving_average(layer, param_name + "_cache", gradient_wrt_param ** 2, self.ada_grad_weight)
-        return self.learning_rate * momentum / (np.sqrt(cache) + EPSILON)
+        ada_grad_cache = self.update_moving_average(layer, param_name + "_cache", gradient_wrt_param ** 2, self.ada_grad_weight)
+        l2_norm_grad = self.l2_weight * param * 2
+        return self.learning_rate * momentum / (np.sqrt(ada_grad_cache) + EPSILON) + l2_norm_grad
 
     def update_moving_average(self, layer, moving_average_name:str, gradient:ndarray, beta:float) -> ndarray:
         """Updates the moving average and returns it corrected."""
