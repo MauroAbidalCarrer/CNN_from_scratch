@@ -8,7 +8,7 @@ from numpy import ndarray
 from numpy.lib.stride_tricks import sliding_window_view as sliding_views
 
 from numpy_utils import cached_zeros, cached_ones
-from constants import DEFAULT_WEIGHTS_SCALING, EPSILON#PARAM_NAMES , HYPER_PARAMS_TO_SERIALIZE
+from constants import DEFAULT_WEIGHTS_SCALING, EPSILON, DFLT_NEGATIVE_LEAKY_RELU_SLOPE
 
 
 # class NeuralNetwork(list):
@@ -196,6 +196,14 @@ class Linear(Layer):
             "weights": self.input.T @ gradients / gradients.shape[0],
             "biases": gradients.mean(axis=0, keepdims=True),
         }
+
+class LeakyRelu(Layer):
+    def forward(self, input:ndarray) -> ndarray:
+        self.input = input
+        return np.where(input >= 0, input, input * DFLT_NEGATIVE_LEAKY_RELU_SLOPE)
+
+    def backward(self, gradients:ndarray) -> ndarray:
+        return {"inputs": np.where(self.input <= 0, DFLT_NEGATIVE_LEAKY_RELU_SLOPE * gradients, gradients)}
 
 class Relu(Layer):
     def forward(self, input:ndarray) -> ndarray:
