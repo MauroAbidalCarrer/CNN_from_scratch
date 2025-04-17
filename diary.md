@@ -392,3 +392,33 @@
 10/04/2025:
   - Trying to use the LeakyRelu only on the hidden fc layer.
   - Saw in the kaggle notebook that the conv layer has a stride of 2 and a padding of 1, that something that might be worth looking into.  
+
+
+15/04/2025:
+  - Implemented a `sliding_window_view` on top of as_strided that works like the numpy function with the addition of the stride parameter.  
+  - Implementing that function is just the tip of the iceberg tho.
+    To update the entire network, I would also need to learn how the backward pass would change with strides and padding in the forward pass.  
+    That's something I should look into but it would take some time I would rather look into regularization techniques like dropouts and take another look at l2 norm/weight decay.  
+
+16/04/2025:
+  - Made chatGPT implement a droput layer (booooh chatGPT I know, I know...)
+  - Added dropout layer after maxpooling layer resulting in the following architecture:
+    ```python
+    [
+        Convolutional((10, 7, 7, 3)),
+        BatchNorm(),
+        Relu(),
+        MaxPool((2, 2)),
+        Dropout(0.25),
+        Flatten(),
+        Linear(1690, 300),
+        LeakyRelu(),
+        Linear(300, y.shape[1]),
+        Softmax(),
+    ]
+    ```
+  - Started a training run for the night.
+
+17/04/2025:
+  - The test accuracy went to 61% so.... not that big of an improvement(sad).
+  

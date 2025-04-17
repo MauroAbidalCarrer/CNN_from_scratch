@@ -170,6 +170,34 @@ class MaxPool(Layer):
         # Reshape back to the original input dimensions.
         dx = dx_reshaped.reshape(x.shape)
         return {"inputs": dx}
+    
+class Dropout(Layer):
+    def __init__(self, rate: float = 0.5):
+        """
+        rate: probability of dropping each unit (i.e. p in [0,1))
+        """
+        assert 0 <= rate < 1, "Dropout rate must be in [0,1)."
+        self.rate = rate
+        self.mask: ndarray | None = None
+        self.training = True
+
+    def forward(self, inputs: ndarray) -> ndarray:
+        if not self.training or self.rate == 0.0:
+            # No dropout in eval mode or if rate is 0
+            return inputs
+        # create a mask of the same shape, keep units with prob (1-rate)
+        keep_prob = 1.0 - self.rate
+        # mask is 1/(1-rate) for kept units, 0 for dropped
+        self.mask = (np.random.rand(*inputs.shape) < keep_prob) / keep_prob
+        return inputs * self.mask
+
+    def backward(self, gradients: ndarray) -> dict[str, ndarray]:
+        if not self.training or self.rate == 0.0:
+            # pass gradients through unchanged in eval or no-dropout
+            return {"inputs": gradients}
+        # gradients only flow through the kept units, scaled same as forward
+        return {"inputs": gradients * self.mask}
+
 
 class Flatten(Layer):
     def forward(self, inputs:ndarray) -> ndarray:
