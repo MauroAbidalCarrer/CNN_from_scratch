@@ -399,6 +399,7 @@
   - Implementing that function is just the tip of the iceberg tho.
     To update the entire network, I would also need to learn how the backward pass would change with strides and padding in the forward pass.  
     That's something I should look into but it would take some time I would rather look into regularization techniques like dropouts and take another look at l2 norm/weight decay.  
+  - Watched [this video](https://www.youtube.com/watch?v=q7seckj1hwM&ab_channel=ArtemKirsanov) I didn't understand it entirely but it was imtersting and helped a little bit to understand l1 and l2 norm.
 
 16/04/2025:
   - Made chatGPT implement a droput layer (booooh chatGPT I know, I know...)
