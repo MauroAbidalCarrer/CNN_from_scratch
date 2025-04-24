@@ -423,3 +423,10 @@
 17/04/2025:
   - The test accuracy went to 61% so.... not that big of an improvement(sad).
   
+
+24/04/2025:
+  - I think this is going to be the end of this project, it's a shame I didn't get a better test accuracy.  
+    I'm stopping here because I thnik I am spending time on waiting for the result of my improvement attemps.  
+    I think I should have used something like `cupy` and implement an auto gradient computing.   
+    Maybe I would get back to it later but now I need to start using `pytorch` and to learn high level concepts rather than wait for the training to finish...  
+    And learn an actually used library.
