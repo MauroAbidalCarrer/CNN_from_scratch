@@ -5,7 +5,7 @@ This is a toy project for me learn the inner workings of:
 - Optimizers
 
 ## Source code:
-This is effectively a very small Deep learning library with the following features:
+This is effectively a very small (500 lines)Deep learning library with the following features:
 Layers:
     - Linear
     - Relu
