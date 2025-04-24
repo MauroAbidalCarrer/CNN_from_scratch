@@ -1,41 +1,11 @@
-from json import load, dump
-from functools import partial
-from itertools import accumulate
 from abc import ABC, abstractmethod
 
 import numpy as np
 from numpy import ndarray
 from numpy.lib.stride_tricks import sliding_window_view as sliding_views
 
-from numpy_utils import cached_zeros, cached_ones
 from constants import DEFAULT_WEIGHTS_SCALING, EPSILON, DFLT_NEGATIVE_LEAKY_RELU_SLOPE
 
-
-# class NeuralNetwork(list):
-#     """Implements a sequential Neural network."""
-
-#     def __init__(*layers):
-#         super().__init__(*layers)
-
-#     def forward(self, inputs:ndarray) -> list[ndarray]:
-#         return list(accumulate(self, lambda x, l: l.forward(x), initial=inputs))
-
-#     def backward(self, gradients:ndarray) -> list[ndarray]:
-#         gradients = {"inputs": gradients}
-#         return list(accumulate(reversed(self), lambda x, l: l.forward(x), initial=gradients))
-
-#     def serialize(self) -> list[dict]:
-#         serialized_self:list[dict] = []
-#         for layer in self:
-#             layer_dict = {"layer_type": layer.__class__.name}
-#             for param_name in filter(partial(hasattr, layer), PARAM_NAMES + HYPER_PARAMS_TO_SERIALIZE):
-#                 layer_dict[param_name] = getattr(layer, param_name)
-#             serialized_self.append(layer_dict)
-#         return serialized_self
-
-#     def to_json(self, path:str):
-#         with open(path, "w") as fp:
-#             dump(self.serialize(), fp, indent=1)
 
 class Layer(ABC):
     @abstractmethod
@@ -170,33 +140,6 @@ class MaxPool(Layer):
         # Reshape back to the original input dimensions.
         dx = dx_reshaped.reshape(x.shape)
         return {"inputs": dx}
-    
-class Dropout(Layer):
-    def __init__(self, rate: float = 0.5):
-        """
-        rate: probability of dropping each unit (i.e. p in [0,1))
-        """
-        assert 0 <= rate < 1, "Dropout rate must be in [0,1)."
-        self.rate = rate
-        self.mask: ndarray | None = None
-        self.training = True
-
-    def forward(self, inputs: ndarray) -> ndarray:
-        if not self.training or self.rate == 0.0:
-            # No dropout in eval mode or if rate is 0
-            return inputs
-        # create a mask of the same shape, keep units with prob (1-rate)
-        keep_prob = 1.0 - self.rate
-        # mask is 1/(1-rate) for kept units, 0 for dropped
-        self.mask = (np.random.rand(*inputs.shape) < keep_prob) / keep_prob
-        return inputs * self.mask
-
-    def backward(self, gradients: ndarray) -> dict[str, ndarray]:
-        if not self.training or self.rate == 0.0:
-            # pass gradients through unchanged in eval or no-dropout
-            return {"inputs": gradients}
-        # gradients only flow through the kept units, scaled same as forward
-        return {"inputs": gradients * self.mask}
 
 
 class Flatten(Layer):
