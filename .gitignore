@@ -1,3 +1,4 @@
+cifar_10_dataset/
 test.py
 test.ipynb
 cifar-10-batches-py/
