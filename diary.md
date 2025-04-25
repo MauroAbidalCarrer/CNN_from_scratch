@@ -490,10 +490,17 @@
   ```
 
   Now that's more like it!!!
-  that's a 76x improvment!!!!!!
-  Let's say I get an overall 50x speed up over an epoch that would reduce my 35 epochs training time from ~3h to ~4 mins!!!.
+  that's a 76x speed up!!!!!!
+  Let's say I get a 50x speed up over an epoch that would reduce my 35 epochs training time from ~3h to ~4 mins!!!.
   - Excitement is back, I'm glad I gave a last look to the project before moving on!
   - Now I need to find yet another cross corr implementation that gives such a speed up since the tensordot is clearly not an option.
   - Hold that thought, I am hvaing a ophthalmic migraine...
   - Ok I'back... and dizzy...
-  - Now I need to 
+  - I tried the `cupyx.profiler.benchmark` function, it's really good.
+    It's telling me that the `cupy.tensordot` function is mostly ran on the GPU.  
+    I looked at the source code but it's a lot more obscure than the numpy implementation.   
+  - I gave a look at the [cnn with cupy repos](https://github.com/AlaaAnani/CNN-from-Scratch-Cupy) that I had found a few weeks ago.
+    In it, the convolution is implemented witht the im2col method.
+  - I had to look at this [medium post](https://medium.com/@sundarramanp2000/different-implementations-of-the-ubiquitous-convolution-6a9269dbe77f).  
+    It confirmed my guess that the im2col cross corr method is the same as the one I first implemented, I guess I really am a genius lol...(I'm not...)  
+  -I am going to switch back to that method but this time with `as_strided`+`reshape` call instead of the intricate, lengthy index creation method.  
