@@ -13,7 +13,6 @@ from numpy import ndarray, array_split as ndarray, split
 from losses import Loss
 from layers import Layer
 from constants import EPSILON, MAX_NB_SAMPLES
-from time_utils import time_to_exec
 from numpy_utils import cached_zeros
 from metrics import metric_func, accuracy
 
@@ -51,18 +50,16 @@ class Adam:
         # This avoids resetting new metrics DF lines to the same epoch value in case this method gets recalled.
         for _ in range(epochs):
             if self.epoch % metric_freq == 0:
-                with time_to_exec("metric recording"):
-                    self.record_metrics(metrics)
-                    if not plt_x is None:
-                        fig = self.create_figure_widget(plt_x, plt_ys, **plt_kwargs) if fig is None else fig
-                        self.update_figure(fig, plt_x, plt_ys)
+                self.record_metrics(metrics)
+                if not plt_x is None:
+                    fig = self.create_figure_widget(plt_x, plt_ys, **plt_kwargs) if fig is None else fig
+                    self.update_figure(fig, plt_x, plt_ys)
             # Shuffle x and y
-            with time_to_exec("steps performing"):
-                permutation = np.random.permutation(len(self.x))
-                self.x = self.x[permutation]
-                self.y = self.y[permutation]
-                for batch_x, batch_y in zip(split(self.x, nb_batches), split(self.y, nb_batches)):
-                    self.step(batch_x, batch_y)
+            permutation = np.random.permutation(len(self.x))
+            self.x = self.x[permutation]
+            self.y = self.y[permutation]
+            for batch_x, batch_y in zip(split(self.x, nb_batches), split(self.y, nb_batches)):
+                self.step(batch_x, batch_y)
             self.epoch += 1
 
     def record_metrics(self, metric_funcs:list[callable]) -> dict[str, any]:
