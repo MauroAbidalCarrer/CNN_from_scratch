@@ -345,7 +345,7 @@
     Test accuracy raised to 40% test accuracy. 
   - Let's try the full dataset then (I might need to increase the swap)...
     I encountered this error: `MemoryError: Unable to allocate 37.0 GiB for an array with shape (50000, 26, 26, 3, 7, 7) and data type float64`.  
-    Given the shape of the ndarray, I assum this is the ndarray of the views.  
+    Given the shape of the ndarray, I assume this is the ndarray of the views.  
     What's weird is that the sliding_window_view should only create a view of the input tensor.  
     Ok, looking at the traceback, I see that this is because the tensordot function uses a transpose on the views before performing the dot call.  
     This effectively requires copy (and therefore an allocation) of the views to be made.  
@@ -362,7 +362,7 @@
   - Interrupting the training at epoch 28, we get a train/test accuracy of 70 and 60 percent respectively.    
     This confirms that the model of yesterday did overfit.  
   - Trying to switch back to einsum to see if it speeds things up (looks like it doesn't).
-    I tested them with `timeit` and tensordot is, in fact, faster.
+    I tested them with `timeit` and `tensordot` is, in fact, faster.
   - Looked at a lot of videos on GPUs to see which one could fit me best, the 5070 or some GPU of the 30 series seem like the best options.  
   - I have also looked at cloud GPU options and runPod and Vast.ai seem pretty interesting.
   - Looked at the kernels and they resemble the cpu kaggle's kernels which is a good sign.
@@ -422,7 +422,6 @@
 
 17/04/2025:
   - The test accuracy went to 61% so.... not that big of an improvement(sad).
-  
 
 24/04/2025:
   - I think this is going to be the end of this project, it's a shame I didn't get a better test accuracy.  
@@ -430,3 +429,67 @@
     I think I should have used something like `cupy` and implement an auto gradient computing.   
     Maybe I would get back to it later but now I need to start using `pytorch` and to learn high level concepts rather than wait for the training to finish...  
     And learn an actually used library.
+
+
+25/04/2025:
+  - Actually...... I relooked into cupy and thought that maybe I had done something wrong in my test because the other online comparison I could fine had much (much) higher speed ups.
+  I guessed that the small 3x speed could be due to the `tensordot` call.   
+  So I ran another `cupy` code test:
+  ```python
+    import numpy as np
+  import cupy as cp
+  import time
+
+  # Print available devices
+  props = cp.cuda.runtime.getDeviceProperties(0)
+  name = props['name'].decode('utf-8')  # bytes → str
+  major = props['major']
+  minor = props['minor']
+  total_mem = props['totalGlobalMem'] / (1024**3)
+  print(f"  Device {0}: {name}  (Compute {major}.{minor}, {total_mem:.1f} GB)")
+
+
+  # Define the input shapes
+  views_shape = (10000, 200)
+  k_shape = (200, 32)
+
+  # Generate random input data
+  views_np = np.random.rand(*views_shape)
+  k_np = np.random.rand(*k_shape)
+
+  # Convert to CuPy arrays
+  views_cp = cp.array(views_np)
+  k_cp = cp.array(k_np)
+  print(views_cp.device)
+  # Warm-up CuPy
+  _ = views_np @ k_np
+  cp.cuda.Stream.null.synchronize()
+
+  # Measure NumPy time
+  start = time.time()
+  tensordot_np = views_cp @ k_cp
+  numpy_time = time.time() - start
+  print(f"NumPy tensordot Time: {numpy_time:.4f}s")
+  
+  # Measure CuPy time with multiple iterations
+  iterations = 10
+  start = time.time()
+  for _ in range(iterations):
+      _ = views_cp @ k_cp
+  cp.cuda.Stream.null.synchronize()
+  cp_time = (time.time() - start) / iterations
+  print(f"Average CuPy tensordot Time: {cp_time:.4f}s")
+  ```
+
+  And got the  following result:
+  ```
+  Device 0: Tesla T4  (Compute 7.5, 14.7 GB)
+  <CUDA Device 0>
+  NumPy tensordot Time: 0.0840s
+  Average CuPy tensordot Time: 0.0011s
+  ```
+
+  Now that's more like it!!!
+  that's a 76x improvment!!!!!!
+  Let's say I get an overall 50x speed up over an epoch that would reduce my 35 epochs training time from ~3h to ~4 mins!!!.
+  - Excitement is back, I glad I gave a last look to the project before moving on!
