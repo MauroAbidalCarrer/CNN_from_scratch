@@ -492,4 +492,8 @@
   Now that's more like it!!!
   that's a 76x improvment!!!!!!
   Let's say I get an overall 50x speed up over an epoch that would reduce my 35 epochs training time from ~3h to ~4 mins!!!.
-  - Excitement is back, I glad I gave a last look to the project before moving on!
+  - Excitement is back, I'm glad I gave a last look to the project before moving on!
+  - Now I need to find yet another cross corr implementation that gives such a speed up since the tensordot is clearly not an option.
+  - Hold that thought, I am hvaing a ophthalmic migraine...
+  - Ok I'back... and dizzy...
+  - Now I need to 
