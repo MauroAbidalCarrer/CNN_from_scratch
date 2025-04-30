@@ -504,3 +504,32 @@
   - I had to look at this [medium post](https://medium.com/@sundarramanp2000/different-implementations-of-the-ubiquitous-convolution-6a9269dbe77f).  
     It confirmed my guess that the im2col cross corr method is the same as the one I first implemented, I guess I really am a genius lol...(I'm not...)  
   -I am going to switch back to that method but this time with `as_strided`+`reshape` call instead of the intricate, lengthy index creation method.  
+
+26/04/2025:
+  - I have (re)implemented the new im2col correlation, works just fine.
+    However it (again) holds a 3x speed up -_-
+  - Also the benchmarking function is a bit odd I don't always get results that make sense
+  - Found this very interesting [notebook on github](https://github.com/anilsathyan7/ConvAcc/blob/master/conv_acc.ipynb).
+    The author gets a 30x speed up.  
+    Tho his method is not vectorized for multi inputs, kernels, channels.
+
+27/04/2025:
+  - Improved speed up simply by reducing batch size.
+
+28/04/2025:
+  - Implemented proper function to benchmark the computations of a given inputs and kernels shape.  
+    And convert the results into a dataframe. 
+  - Using timeit + cp.asnumpy gives time measurments that make more sense.
+
+29/04/2025:
+  - Found a github issue that suggest using float32 instead of float64, after performing the switch a get a 6x speed up which is pretty cool.
+  - Added the corss corr acc implementation of the [github notebook](https://github.com/anilsathyan7/ConvAcc/blob/).
+    Interestingly enough, the corss corr acc implementation is faster than mine even tho the implementations are very similar.  
+    It seems like there are some hidden overhead caused by the abstraction 
+
+30/04/2025:
+  - Ran a bigger benchmarking with more input/kernels shapes combinations.  
+    Clearly, there is a weird cupy overhead because some times I see the GPU at 100% and some times at ~30%.  
+    The speed ups go from 0.5x (so actually slower than numpy) to 40x.
+    Note: I run the computation five times for each combination.
+    
